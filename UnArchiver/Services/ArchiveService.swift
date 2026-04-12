@@ -45,7 +45,9 @@ enum ArchiveService {
             return parsed.map { $0.entry }
 
         case .tarXZ:
-            throw ArchiveError.unsupportedFormat
+            let decompressed = try decompress(data: data, type: .tarXZ)
+            let parsed = try TarParser.parse(data: decompressed)
+            return parsed.map { $0.entry }
 
         case .gzip:
             // Single compressed file – surface as one entry
@@ -89,10 +91,15 @@ enum ArchiveService {
             let parsed = try TarParser.parse(data: decompressed)
             return try extractFromTarParsed(parsed, entry: entry, rawData: decompressed)
 
+        case .tarXZ:
+            let decompressed = try decompress(data: data, type: .tarXZ)
+            let parsed = try TarParser.parse(data: decompressed)
+            return try extractFromTarParsed(parsed, entry: entry, rawData: decompressed)
+
         case .gzip:
             return try GZipService.decompress(data)
 
-        case .tarXZ, .unknown:
+        case .unknown:
             throw ArchiveError.unsupportedFormat
         }
     }
@@ -114,6 +121,7 @@ enum ArchiveService {
             switch type {
             case .tarGzip:  return try GZipService.decompress(data)
             case .tarBzip2: return try BZip2Service.decompress(data)
+            case .tarXZ:    return try XZService.decompress(data)
             default:        throw ArchiveError.unsupportedFormat
             }
         } catch let e as ArchiveError {

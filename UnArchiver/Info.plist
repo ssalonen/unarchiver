@@ -152,6 +152,24 @@
                 <string>gzip</string>
             </array>
         </dict>
+        <!-- TAR+XZ -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>XZ Compressed TAR Archive</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.tukaani.xz-archive</string>
+                <string>public.xz-archive</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>tar.xz</string>
+                <string>txz</string>
+                <string>xz</string>
+            </array>
+        </dict>
         <!-- ZIP -->
         <dict>
             <key>CFBundleTypeName</key>

@@ -61,6 +61,9 @@ enum SupportedTypes {
         UTType(mimeType: "application/x-tar")       ?? .data,
         UTType(mimeType: "application/gzip")        ?? .gzip,
         UTType(mimeType: "application/x-bzip2")     ?? .data,
+        UTType(filenameExtension: "xz")             ?? .data,
+        UTType(filenameExtension: "txz")            ?? .data,
+        UTType(mimeType: "application/x-xz")        ?? .data,
     ].uniqued()
 }
 

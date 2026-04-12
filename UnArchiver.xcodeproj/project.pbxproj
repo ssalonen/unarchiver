@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		/* SWCompression package product */
+		AA0700000000000000000041 /* SWCompression in Frameworks */ = {isa = PBXBuildFile; productRef = AA0900000000000000000002 /* SWCompression */; };
 		/* App source files */
 		AA0700000000000000000001 /* UnArchiverApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000001 /* UnArchiverApp.swift */; };
 		AA0700000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000002 /* ContentView.swift */; };
@@ -17,6 +19,7 @@
 		AA0700000000000000000007 /* TarParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000007 /* TarParser.swift */; };
 		AA0700000000000000000008 /* ZipParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000008 /* ZipParser.swift */; };
 		AA0700000000000000000009 /* BZip2Service.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000009 /* BZip2Service.swift */; };
+		AA0700000000000000000040 /* XZService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000001A /* XZService.swift */; };
 		AA070000000000000000000A /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000A /* WelcomeView.swift */; };
 		AA070000000000000000000B /* ArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000B /* ArchiveView.swift */; };
 		AA070000000000000000000C /* FileRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000C /* FileRowView.swift */; };
@@ -78,6 +81,7 @@
 		AA0600000000000000000010 /* libbz2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libbz2.tbd; path = usr/lib/libbz2.tbd; sourceTree = SDKROOT; };
 		AA0600000000000000000011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0600000000000000000012 /* UnArchiver-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UnArchiver-Bridging-Header.h"; sourceTree = "<group>"; };
+		AA060000000000000000001A /* XZService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XZService.swift; sourceTree = "<group>"; };
 		/* Share extension */
 		AA0600000000000000000020 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AA0600000000000000000021 /* ShareExtension-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ShareExtension-Info.plist"; path = "ShareExtension/Info.plist"; sourceTree = "<group>"; };
@@ -90,6 +94,7 @@
 			files = (
 				AA070000000000000000000F /* libz.tbd in Frameworks */,
 				AA0700000000000000000010 /* libbz2.tbd in Frameworks */,
+				AA0700000000000000000041 /* SWCompression in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -183,6 +188,7 @@
 				AA0600000000000000000007 /* TarParser.swift */,
 				AA0600000000000000000008 /* ZipParser.swift */,
 				AA0600000000000000000009 /* BZip2Service.swift */,
+				AA060000000000000000001A /* XZService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -205,6 +211,9 @@
 				AA0800000000000000000002 /* PBXTargetDependency */,
 			);
 			name = UnArchiver;
+			packageProductDependencies = (
+				AA0900000000000000000002 /* SWCompression */,
+			);
 			productName = UnArchiver;
 			productReference = AA0100000000000000000001 /* UnArchiver.app */;
 			productType = "com.apple.product-type.application";
@@ -253,6 +262,9 @@
 				Base,
 			);
 			mainGroup = AA0000000000000000000002 /* MainGroup */;
+			packageReferences = (
+				AA0900000000000000000001 /* XCRemoteSwiftPackageReference "SWCompression" */,
+			);
 			productRefGroup = AA0000000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -295,6 +307,7 @@
 				AA0700000000000000000007 /* TarParser.swift in Sources */,
 				AA0700000000000000000008 /* ZipParser.swift in Sources */,
 				AA0700000000000000000009 /* BZip2Service.swift in Sources */,
+				AA0700000000000000000040 /* XZService.swift in Sources */,
 				AA070000000000000000000A /* WelcomeView.swift in Sources */,
 				AA070000000000000000000B /* ArchiveView.swift in Sources */,
 				AA070000000000000000000C /* FileRowView.swift in Sources */,
@@ -562,6 +575,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA0900000000000000000001 /* XCRemoteSwiftPackageReference "SWCompression" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tsolomko/SWCompression";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.8.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA0900000000000000000002 /* SWCompression */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0900000000000000000001 /* XCRemoteSwiftPackageReference "SWCompression" */;
+			productName = SWCompression;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 	};
 	rootObject = AA0000000000000000000001 /* Project object */;
