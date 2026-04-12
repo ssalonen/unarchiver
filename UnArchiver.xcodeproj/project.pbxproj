@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		/* SWCompression package product */
 		AA0700000000000000000041 /* SWCompression in Frameworks */ = {isa = PBXBuildFile; productRef = AA0900000000000000000002 /* SWCompression */; };
+		/* Highlightr package product */
+		AA0700000000000000000042 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = AA0900000000000000000004 /* Highlightr */; };
+		AA0700000000000000000043 /* SyntaxTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000001B /* SyntaxTextView.swift */; };
 		/* App source files */
 		AA0700000000000000000001 /* UnArchiverApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000001 /* UnArchiverApp.swift */; };
 		AA0700000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000002 /* ContentView.swift */; };
@@ -82,6 +85,7 @@
 		AA0600000000000000000011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0600000000000000000012 /* UnArchiver-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UnArchiver-Bridging-Header.h"; sourceTree = "<group>"; };
 		AA060000000000000000001A /* XZService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XZService.swift; sourceTree = "<group>"; };
+		AA060000000000000000001B /* SyntaxTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxTextView.swift; sourceTree = "<group>"; };
 		/* Share extension */
 		AA0600000000000000000020 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AA0600000000000000000021 /* ShareExtension-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ShareExtension-Info.plist"; path = "ShareExtension/Info.plist"; sourceTree = "<group>"; };
@@ -95,6 +99,7 @@
 				AA070000000000000000000F /* libz.tbd in Frameworks */,
 				AA0700000000000000000010 /* libbz2.tbd in Frameworks */,
 				AA0700000000000000000041 /* SWCompression in Frameworks */,
+				AA0700000000000000000042 /* Highlightr in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -176,6 +181,7 @@
 				AA060000000000000000000B /* ArchiveView.swift */,
 				AA060000000000000000000C /* FileRowView.swift */,
 				AA060000000000000000000D /* TextViewerView.swift */,
+				AA060000000000000000001B /* SyntaxTextView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -213,6 +219,7 @@
 			name = UnArchiver;
 			packageProductDependencies = (
 				AA0900000000000000000002 /* SWCompression */,
+				AA0900000000000000000004 /* Highlightr */,
 			);
 			productName = UnArchiver;
 			productReference = AA0100000000000000000001 /* UnArchiver.app */;
@@ -264,6 +271,7 @@
 			mainGroup = AA0000000000000000000002 /* MainGroup */;
 			packageReferences = (
 				AA0900000000000000000001 /* XCRemoteSwiftPackageReference "SWCompression" */,
+				AA0900000000000000000003 /* XCRemoteSwiftPackageReference "Highlightr" */,
 			);
 			productRefGroup = AA0000000000000000000003 /* Products */;
 			projectDirPath = "";
@@ -308,6 +316,7 @@
 				AA0700000000000000000008 /* ZipParser.swift in Sources */,
 				AA0700000000000000000009 /* BZip2Service.swift in Sources */,
 				AA0700000000000000000040 /* XZService.swift in Sources */,
+				AA0700000000000000000043 /* SyntaxTextView.swift in Sources */,
 				AA070000000000000000000A /* WelcomeView.swift in Sources */,
 				AA070000000000000000000B /* ArchiveView.swift in Sources */,
 				AA070000000000000000000C /* FileRowView.swift in Sources */,
@@ -585,6 +594,14 @@
 				minimumVersion = 4.8.0;
 			};
 		};
+		AA0900000000000000000003 /* XCRemoteSwiftPackageReference "Highlightr" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/raspu/Highlightr";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -592,6 +609,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AA0900000000000000000001 /* XCRemoteSwiftPackageReference "SWCompression" */;
 			productName = SWCompression;
+		};
+		AA0900000000000000000004 /* Highlightr */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0900000000000000000003 /* XCRemoteSwiftPackageReference "Highlightr" */;
+			productName = Highlightr;
 		};
 /* End XCSwiftPackageProductDependency section */
 

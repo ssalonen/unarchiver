@@ -45,6 +45,58 @@ enum TextDetector {
         "gitignore", "gitattributes", "env", "lock", "gemfile", "podfile"
     ]
 
+    /// Maps a filename to a highlight.js language identifier, or nil for plain text.
+    static func highlightLanguage(for name: String) -> String? {
+        let lower = name.lowercased()
+        let ext = (lower as NSString).pathExtension
+        let map: [String: String] = [
+            "swift": "swift",
+            "py": "python", "pyw": "python",
+            "js": "javascript", "mjs": "javascript", "cjs": "javascript",
+            "ts": "typescript",
+            "json": "json",
+            "yaml": "yaml", "yml": "yaml",
+            "sh": "bash", "bash": "bash", "zsh": "bash", "fish": "bash",
+            "html": "html", "htm": "html",
+            "css": "css", "scss": "scss", "sass": "scss", "less": "less",
+            "c": "c",
+            "cpp": "cpp", "cc": "cpp", "cxx": "cpp",
+            "h": "cpp", "hpp": "cpp", "hxx": "cpp",
+            "java": "java",
+            "kt": "kotlin", "kts": "kotlin",
+            "rb": "ruby",
+            "go": "go",
+            "rs": "rust",
+            "sql": "sql",
+            "xml": "xml", "plist": "xml", "svg": "xml",
+            "md": "markdown", "markdown": "markdown",
+            "toml": "toml",
+            "ini": "ini", "cfg": "ini", "conf": "ini",
+            "php": "php",
+            "cs": "csharp",
+            "m": "objectivec", "mm": "objectivec",
+            "proto": "protobuf",
+            "graphql": "graphql", "gql": "graphql",
+            "lua": "lua",
+            "r": "r",
+            "scala": "scala",
+            "gradle": "groovy", "groovy": "groovy",
+            "tf": "hcl", "hcl": "hcl",
+            "dockerfile": "dockerfile",
+            "makefile": "makefile",
+        ]
+        if let lang = map[ext] { return lang }
+        // Extensionless files by full name
+        let knownNames: [String: String] = [
+            "dockerfile": "dockerfile",
+            "makefile": "makefile",
+            "gemfile": "ruby",
+            "podfile": "ruby",
+            "rakefile": "ruby",
+        ]
+        return knownNames[lower]
+    }
+
     static func isLikelyText(name: String) -> Bool {
         let lower = name.lowercased()
         let ext = (lower as NSString).pathExtension
