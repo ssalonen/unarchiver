@@ -1,0 +1,152 @@
+name: Security
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 8 * * 1"   # every Monday 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write   # needed to upload SARIF to GitHub Security tab
+  pull-requests: read
+
+jobs:
+  # ------------------------------------------------------------------ #
+  #  1. CodeQL – static analysis on your own Swift code                 #
+  # ------------------------------------------------------------------ #
+  codeql:
+    name: CodeQL (Swift)
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: swift
+          # Catch common issues: injection, unsafe deserialization, path traversal, etc.
+          queries: security-extended
+
+      - name: Select Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+
+      - name: Resolve packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project UnArchiver.xcodeproj \
+            -scheme UnArchiver
+
+      - name: Build (for CodeQL)
+        run: |
+          xcodebuild build \
+            -project UnArchiver.xcodeproj \
+            -scheme UnArchiver \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:swift"
+
+  # ------------------------------------------------------------------ #
+  #  2. OSV Scanner – known CVEs in dependencies                        #
+  # ------------------------------------------------------------------ #
+  osv:
+    name: OSV Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve Package.resolved (install Swift toolchain)
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "5.10"
+
+      - name: Generate Package.resolved
+        run: swift package resolve
+
+      - name: Run OSV Scanner
+        uses: google/osv-scanner-action@v1
+        with:
+          scan-args: |
+            --lockfile=Package.resolved
+            --format=sarif
+            --output=osv-results.sarif
+        continue-on-error: true   # upload results even if vulnerabilities found
+
+      - name: Upload OSV results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: osv-results.sarif
+          category: osv-scanner
+
+  # ------------------------------------------------------------------ #
+  #  3. Supply-chain check – verify package URLs haven't changed        #
+  # ------------------------------------------------------------------ #
+  supply-chain:
+    name: Supply-chain Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify expected package URLs
+        run: |
+          python3 - <<'PYEOF'
+          import sys, re
+
+          EXPECTED = {
+              "SWCompression": "https://github.com/tsolomko/SWCompression",
+              "Highlightr":    "https://github.com/raspu/Highlightr",
+          }
+
+          with open("UnArchiver.xcodeproj/project.pbxproj") as f:
+              pbxproj = f.read()
+
+          errors = []
+          for name, url in EXPECTED.items():
+              pattern = rf'XCRemoteSwiftPackageReference "{re.escape(name)}"[^{{]*\{{[^}}]*repositoryURL\s*=\s*"([^"]+)"'
+              m = re.search(pattern, pbxproj, re.DOTALL)
+              if not m:
+                  errors.append(f"MISSING: {name} not found in project.pbxproj")
+              elif m.group(1) != url:
+                  errors.append(
+                      f"MISMATCH: {name}\n"
+                      f"  expected: {url}\n"
+                      f"  found:    {m.group(1)}"
+                  )
+              else:
+                  print(f"OK  {name}  →  {url}")
+
+          if errors:
+              print("\n--- SUPPLY CHAIN ERRORS ---")
+              for e in errors:
+                  print(e)
+              sys.exit(1)
+          PYEOF
+
+  # ------------------------------------------------------------------ #
+  #  4. Dependency review – block PRs that introduce known-bad deps     #
+  # ------------------------------------------------------------------ #
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0
