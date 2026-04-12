@@ -134,6 +134,92 @@ jobs:
               sys.exit(1)
           PYEOF
 
+      - name: Verify Package.swift matches project.pbxproj
+        run: |
+          python3 - <<'PYEOF'
+          import re, sys
+
+          pbxproj   = open("UnArchiver.xcodeproj/project.pbxproj").read()
+          pkg_swift = open("Package.swift").read()
+
+          # --- Parse project.pbxproj -------------------------------------------
+          # The XCRemoteSwiftPackageReference section looks like:
+          #   /* Begin XCRemoteSwiftPackageReference section */
+          #   UUID /* XCRemoteSwiftPackageReference "NAME" */ = {
+          #       isa = XCRemoteSwiftPackageReference;
+          #       repositoryURL = "URL";
+          #       requirement = { kind = upToNextMajorVersion; minimumVersion = X.Y.Z; };
+          #   };
+          #   /* End XCRemoteSwiftPackageReference section */
+          #
+          # NOTE: nested braces (requirement = { }) break naive block-end detection,
+          # so we parse the whole section and zip urls with versions in order.
+          section = re.search(
+              r'/\* Begin XCRemoteSwiftPackageReference section \*/'
+              r'(.*?)'
+              r'/\* End XCRemoteSwiftPackageReference section \*/',
+              pbxproj, re.DOTALL
+          )
+          if not section:
+              print("ERROR: XCRemoteSwiftPackageReference section not found in project.pbxproj")
+              sys.exit(1)
+
+          urls     = re.findall(r'repositoryURL\s*=\s*"([^"]+)"',  section.group(1))
+          versions = re.findall(r'minimumVersion\s*=\s*(\S+?)\s*;', section.group(1))
+
+          if len(urls) != len(versions):
+              print(f"ERROR: found {len(urls)} URLs but {len(versions)} minimumVersion values "
+                    f"in pbxproj — manual inspection needed")
+              sys.exit(1)
+
+          pbx_deps = dict(zip(urls, versions))
+
+          # --- Parse Package.swift ---------------------------------------------
+          # Lines look like:
+          #   .package(url: "URL", from: "X.Y.Z"),
+          pkg_deps = {
+              url: ver
+              for url, ver in re.findall(
+                  r'\.package\s*\(\s*url:\s*"([^"]+)"\s*,\s*from:\s*"([^"]+)"',
+                  pkg_swift
+              )
+          }
+
+          # --- Compare both ways -----------------------------------------------
+          errors = []
+
+          for url, pbx_ver in pbx_deps.items():
+              if url not in pkg_deps:
+                  errors.append(
+                      f"MISSING from Package.swift:\n"
+                      f"  {url}  (pbxproj requires {pbx_ver})\n"
+                      f"  Add:  .package(url: \"{url}\", from: \"{pbx_ver}\")"
+                  )
+              elif pkg_deps[url] != pbx_ver:
+                  errors.append(
+                      f"VERSION MISMATCH: {url}\n"
+                      f"  project.pbxproj requires : {pbx_ver}\n"
+                      f"  Package.swift declares   : {pkg_deps[url]}"
+                  )
+              else:
+                  print(f"OK  {url}  @  {pbx_ver}")
+
+          for url, pkg_ver in pkg_deps.items():
+              if url not in pbx_deps:
+                  errors.append(
+                      f"EXTRA in Package.swift (not in pbxproj): {url} @ {pkg_ver}\n"
+                      f"  Either add it to the Xcode project or remove it from Package.swift"
+                  )
+
+          if errors:
+              print(f"\n--- {len(errors)} SYNC ERROR(S) ---")
+              for e in errors:
+                  print(e)
+              sys.exit(1)
+          else:
+              print(f"\nAll {len(pbx_deps)} package(s) in sync.")
+          PYEOF
+
   # ------------------------------------------------------------------ #
   #  4. Dependency review – block PRs that introduce known-bad deps     #
   # ------------------------------------------------------------------ #
