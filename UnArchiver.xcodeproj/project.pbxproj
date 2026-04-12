@@ -1,0 +1,568 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		/* App source files */
+		AA0700000000000000000001 /* UnArchiverApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000001 /* UnArchiverApp.swift */; };
+		AA0700000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000002 /* ContentView.swift */; };
+		AA0700000000000000000003 /* ArchiveEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000003 /* ArchiveEntry.swift */; };
+		AA0700000000000000000004 /* ArchiveFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000004 /* ArchiveFile.swift */; };
+		AA0700000000000000000005 /* ArchiveService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000005 /* ArchiveService.swift */; };
+		AA0700000000000000000006 /* GZipService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000006 /* GZipService.swift */; };
+		AA0700000000000000000007 /* TarParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000007 /* TarParser.swift */; };
+		AA0700000000000000000008 /* ZipParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000008 /* ZipParser.swift */; };
+		AA0700000000000000000009 /* BZip2Service.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000009 /* BZip2Service.swift */; };
+		AA070000000000000000000A /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000A /* WelcomeView.swift */; };
+		AA070000000000000000000B /* ArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000B /* ArchiveView.swift */; };
+		AA070000000000000000000C /* FileRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000C /* FileRowView.swift */; };
+		AA070000000000000000000D /* TextViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000D /* TextViewerView.swift */; };
+		/* App resources */
+		AA070000000000000000000E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000E /* Assets.xcassets */; };
+		/* App frameworks */
+		AA070000000000000000000F /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000F /* libz.tbd */; };
+		AA0700000000000000000010 /* libbz2.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000010 /* libbz2.tbd */; };
+		/* Share extension source */
+		AA0700000000000000000020 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000020 /* ShareViewController.swift */; };
+		/* Embed extension */
+		AA0700000000000000000030 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000002 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA0800000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0200000000000000000002;
+			remoteInfo = ShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AA0500000000000000000004 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AA0700000000000000000030 /* ShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		AA0100000000000000000001 /* UnArchiver.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UnArchiver.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0100000000000000000002 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		/* App sources */
+		AA0600000000000000000001 /* UnArchiverApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnArchiverApp.swift; sourceTree = "<group>"; };
+		AA0600000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		AA0600000000000000000003 /* ArchiveEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveEntry.swift; sourceTree = "<group>"; };
+		AA0600000000000000000004 /* ArchiveFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveFile.swift; sourceTree = "<group>"; };
+		AA0600000000000000000005 /* ArchiveService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveService.swift; sourceTree = "<group>"; };
+		AA0600000000000000000006 /* GZipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GZipService.swift; sourceTree = "<group>"; };
+		AA0600000000000000000007 /* TarParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TarParser.swift; sourceTree = "<group>"; };
+		AA0600000000000000000008 /* ZipParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZipParser.swift; sourceTree = "<group>"; };
+		AA0600000000000000000009 /* BZip2Service.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BZip2Service.swift; sourceTree = "<group>"; };
+		AA060000000000000000000A /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		AA060000000000000000000B /* ArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveView.swift; sourceTree = "<group>"; };
+		AA060000000000000000000C /* FileRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileRowView.swift; sourceTree = "<group>"; };
+		AA060000000000000000000D /* TextViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextViewerView.swift; sourceTree = "<group>"; };
+		AA060000000000000000000E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA060000000000000000000F /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		AA0600000000000000000010 /* libbz2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libbz2.tbd; path = usr/lib/libbz2.tbd; sourceTree = SDKROOT; };
+		AA0600000000000000000011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA0600000000000000000012 /* UnArchiver-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UnArchiver-Bridging-Header.h"; sourceTree = "<group>"; };
+		/* Share extension */
+		AA0600000000000000000020 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		AA0600000000000000000021 /* ShareExtension-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ShareExtension-Info.plist"; path = "ShareExtension/Info.plist"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA0500000000000000000003 /* Frameworks (App) */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA070000000000000000000F /* libz.tbd in Frameworks */,
+				AA0700000000000000000010 /* libbz2.tbd in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0500000000000000000007 /* Frameworks (ShareExt) */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA0000000000000000000002 /* MainGroup */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000004 /* UnArchiver */,
+				AA0000000000000000000005 /* ShareExtension */,
+				AA0000000000000000000006 /* Frameworks */,
+				AA0000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA0100000000000000000001 /* UnArchiver.app */,
+				AA0100000000000000000002 /* ShareExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000004 /* UnArchiver */ = {
+			isa = PBXGroup;
+			children = (
+				AA0600000000000000000001 /* UnArchiverApp.swift */,
+				AA0600000000000000000002 /* ContentView.swift */,
+				AA0600000000000000000012 /* UnArchiver-Bridging-Header.h */,
+				AA0600000000000000000011 /* Info.plist */,
+				AA060000000000000000000E /* Assets.xcassets */,
+				AA0000000000000000000007 /* Models */,
+				AA0000000000000000000008 /* Views */,
+				AA0000000000000000000009 /* Services */,
+			);
+			path = UnArchiver;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000005 /* ShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				AA0600000000000000000020 /* ShareViewController.swift */,
+				AA0600000000000000000021 /* ShareExtension-Info.plist */,
+			);
+			path = ShareExtension;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000006 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				AA060000000000000000000F /* libz.tbd */,
+				AA0600000000000000000010 /* libbz2.tbd */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000007 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AA0600000000000000000003 /* ArchiveEntry.swift */,
+				AA0600000000000000000004 /* ArchiveFile.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000008 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				AA060000000000000000000A /* WelcomeView.swift */,
+				AA060000000000000000000B /* ArchiveView.swift */,
+				AA060000000000000000000C /* FileRowView.swift */,
+				AA060000000000000000000D /* TextViewerView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000009 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AA0600000000000000000005 /* ArchiveService.swift */,
+				AA0600000000000000000006 /* GZipService.swift */,
+				AA0600000000000000000007 /* TarParser.swift */,
+				AA0600000000000000000008 /* ZipParser.swift */,
+				AA0600000000000000000009 /* BZip2Service.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA0200000000000000000001 /* UnArchiver */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0400000000000000000002 /* Build configuration list for PBXNativeTarget "UnArchiver" */;
+			buildPhases = (
+				AA0500000000000000000001 /* Sources */,
+				AA0500000000000000000002 /* Resources */,
+				AA0500000000000000000003 /* Frameworks (App) */,
+				AA0500000000000000000004 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA0800000000000000000002 /* PBXTargetDependency */,
+			);
+			name = UnArchiver;
+			productName = UnArchiver;
+			productReference = AA0100000000000000000001 /* UnArchiver.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AA0200000000000000000002 /* ShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0400000000000000000003 /* Build configuration list for PBXNativeTarget "ShareExtension" */;
+			buildPhases = (
+				AA0500000000000000000005 /* Sources (ShareExt) */,
+				AA0500000000000000000006 /* Resources (ShareExt) */,
+				AA0500000000000000000007 /* Frameworks (ShareExt) */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShareExtension;
+			productName = ShareExtension;
+			productReference = AA0100000000000000000002 /* ShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					AA0200000000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					AA0200000000000000000002 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = AA0400000000000000000001 /* Build configuration list for PBXProject "UnArchiver" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA0000000000000000000002 /* MainGroup */;
+			productRefGroup = AA0000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA0200000000000000000001 /* UnArchiver */,
+				AA0200000000000000000002 /* ShareExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA0500000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA070000000000000000000E /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0500000000000000000006 /* Resources (ShareExt) */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA0500000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0700000000000000000001 /* UnArchiverApp.swift in Sources */,
+				AA0700000000000000000002 /* ContentView.swift in Sources */,
+				AA0700000000000000000003 /* ArchiveEntry.swift in Sources */,
+				AA0700000000000000000004 /* ArchiveFile.swift in Sources */,
+				AA0700000000000000000005 /* ArchiveService.swift in Sources */,
+				AA0700000000000000000006 /* GZipService.swift in Sources */,
+				AA0700000000000000000007 /* TarParser.swift in Sources */,
+				AA0700000000000000000008 /* ZipParser.swift in Sources */,
+				AA0700000000000000000009 /* BZip2Service.swift in Sources */,
+				AA070000000000000000000A /* WelcomeView.swift in Sources */,
+				AA070000000000000000000B /* ArchiveView.swift in Sources */,
+				AA070000000000000000000C /* FileRowView.swift in Sources */,
+				AA070000000000000000000D /* TextViewerView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0500000000000000000005 /* Sources (ShareExt) */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0700000000000000000020 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA0800000000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0200000000000000000002 /* ShareExtension */;
+			targetProxy = AA0800000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		/* Project-level */
+		AA0300000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA0300000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		/* App target */
+		AA0300000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = UnArchiver/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourcompany.unarchiver";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "UnArchiver/UnArchiver-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA0300000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = UnArchiver/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourcompany.unarchiver";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "UnArchiver/UnArchiver-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		/* Share extension */
+		AA0300000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourcompany.unarchiver.shareextension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA0300000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourcompany.unarchiver.shareextension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA0400000000000000000001 /* Build configuration list for PBXProject "UnArchiver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0300000000000000000001 /* Debug */,
+				AA0300000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0400000000000000000002 /* Build configuration list for PBXNativeTarget "UnArchiver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0300000000000000000003 /* Debug */,
+				AA0300000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0400000000000000000003 /* Build configuration list for PBXNativeTarget "ShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0300000000000000000005 /* Debug */,
+				AA0300000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = AA0000000000000000000001 /* Project object */;
+}

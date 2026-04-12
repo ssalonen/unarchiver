@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- ============================================================
+         App identity
+         ============================================================ -->
+    <key>CFBundleName</key>
+    <string>UnArchiver</string>
+    <key>CFBundleDisplayName</key>
+    <string>UnArchiver</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+
+    <!-- ============================================================
+         Minimum iOS version / orientation
+         ============================================================ -->
+    <key>MinimumOSVersion</key>
+    <string>16.0</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>arm64</string>
+    </array>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+
+    <!-- ============================================================
+         Files app / document provider integration
+         ============================================================ -->
+    <!-- Allow the app to open files in-place from Files / other apps -->
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
+    <!-- Allow other apps to open documents managed by this app -->
+    <key>UIFileSharingEnabled</key>
+    <true/>
+    <!-- Support iTunes file sharing -->
+    <key>UIDocumentBrowserUserInterfaceStyle</key>
+    <string>Automatic</string>
+
+    <!-- ============================================================
+         URL scheme for inter-app communication with Share Extension
+         ============================================================ -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.yourcompany.unarchiver</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>unarchiver</string>
+            </array>
+        </dict>
+    </array>
+
+    <!-- ============================================================
+         Document types (what files this app can open)
+         ============================================================ -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <!-- TAR+GZip -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>GZip Compressed TAR Archive</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.gnu.gnu-tar-gzip-archive</string>
+                <string>com.public.tar-gzip-archive</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>tar.gz</string>
+                <string>tgz</string>
+            </array>
+        </dict>
+        <!-- TAR+BZip2 -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>BZip2 Compressed TAR Archive</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.bzip2.bzip2-archive</string>
+                <string>public.bzip2-archive</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>tar.bz2</string>
+                <string>tbz2</string>
+                <string>tbz</string>
+            </array>
+        </dict>
+        <!-- TAR -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>TAR Archive</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.tar-archive</string>
+                <string>org.gnu.gnu-tar-archive</string>
+                <string>com.apple.binhex-archive</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>tar</string>
+            </array>
+        </dict>
+        <!-- GZip (single file) -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>GZip File</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.gnu.gnu-zip-archive</string>
+                <string>public.gzip-archive</string>
+                <string>com.public.gzip</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>gz</string>
+                <string>gzip</string>
+            </array>
+        </dict>
+        <!-- ZIP -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>ZIP Archive</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.zip-archive</string>
+                <string>com.pkware.zip-archive</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>zip</string>
+            </array>
+        </dict>
+    </array>
+
+    <!-- ============================================================
+         Exported UTIs (teach the system about file types we own)
+         ============================================================ -->
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.yourcompany.unarchiver.tar-gz</string>
+            <key>UTTypeDescription</key>
+            <string>GZip-compressed TAR Archive</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+                <string>public.archive</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>tar.gz</string>
+                    <string>tgz</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>application/x-tar</string>
+                    <string>application/gzip</string>
+                </array>
+            </dict>
+        </dict>
+    </array>
+
+    <!-- ============================================================
+         Imported UTIs (declare understanding of system types)
+         ============================================================ -->
+    <key>UTImportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>public.tar-archive</string>
+            <key>UTTypeDescription</key>
+            <string>TAR Archive</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+                <string>public.archive</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array><string>tar</string></array>
+                <key>public.mime-type</key>
+                <array><string>application/x-tar</string></array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>public.gzip-archive</string>
+            <key>UTTypeDescription</key>
+            <string>GZip Archive</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+                <string>public.archive</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array><string>gz</string></array>
+                <key>public.mime-type</key>
+                <array><string>application/gzip</string></array>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>
