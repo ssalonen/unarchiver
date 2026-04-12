@@ -61,17 +61,10 @@ jobs:
   # ------------------------------------------------------------------ #
   osv:
     name: OSV Vulnerability Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Run OSV Scanner
-        uses: google/osv-scanner-action@v2.3.5
-        with:
-          scan-args: |-
-            --lockfile=Package.resolved
-        continue-on-error: true   # surface findings without blocking the workflow
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.3.5
+    permissions:
+      security-events: write
+      contents: read
 
   # ------------------------------------------------------------------ #
   #  3. Supply-chain check – verify package URLs haven't changed        #
