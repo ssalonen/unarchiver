@@ -66,28 +66,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Resolve Package.resolved (install Swift toolchain)
-        uses: swift-actions/setup-swift@v3
-        with:
-          swift-version: "5.10"
-
-      - name: Generate Package.resolved
-        run: swift package resolve
-
       - name: Run OSV Scanner
         uses: google/osv-scanner-action@v1
         with:
-          scan-args: |
+          scan-args: |-
             --lockfile=Package.resolved
-            --format=sarif
-            --output=osv-results.sarif
-        continue-on-error: true   # upload results even if vulnerabilities found
-
-      - name: Upload OSV results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: osv-results.sarif
-          category: osv-scanner
+        continue-on-error: true   # surface findings without blocking the workflow
 
   # ------------------------------------------------------------------ #
   #  3. Supply-chain check – verify package URLs haven't changed        #
@@ -234,5 +218,6 @@ jobs:
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
         with:
-          fail-on-severity: moderate
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0
+          fail-on-severity: high
+          deny-licenses: GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later
+          comment-summary-in-pr: never

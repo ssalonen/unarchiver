@@ -58,6 +58,13 @@ enum ArchiveService {
                                  size: UInt64(decompressed.count),
                                  compressedSize: UInt64(data.count))]
 
+        case .xz:
+            let originalName = stripXzExtension(url.lastPathComponent)
+            let decompressed = try XZService.decompress(data)
+            return [ArchiveEntry(path: originalName,
+                                 size: UInt64(decompressed.count),
+                                 compressedSize: UInt64(data.count))]
+
         case .unknown:
             throw ArchiveError.unsupportedFormat
         }
@@ -98,6 +105,9 @@ enum ArchiveService {
 
         case .gzip:
             return try GZipService.decompress(data)
+
+        case .xz:
+            return try XZService.decompress(data)
 
         case .unknown:
             throw ArchiveError.unsupportedFormat
@@ -148,6 +158,13 @@ enum ArchiveService {
         let lower = name.lowercased()
         for suffix in [".gz", ".gzip"] where lower.hasSuffix(suffix) {
             return String(name.dropLast(suffix.count))
+        }
+        return name
+    }
+
+    private static func stripXzExtension(_ name: String) -> String {
+        if name.lowercased().hasSuffix(".xz") {
+            return String(name.dropLast(3))
         }
         return name
     }
