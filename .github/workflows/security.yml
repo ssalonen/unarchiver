@@ -221,4 +221,3 @@ jobs:
           fail-on-severity: high
           deny-licenses: GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later
           comment-summary-in-pr: never
-        continue-on-error: true   # requires Dependency Graph to be enabled in repo Settings → Security
