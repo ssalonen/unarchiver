@@ -28,7 +28,7 @@
          Minimum iOS version / orientation
          ============================================================ -->
     <key>MinimumOSVersion</key>
-    <string>16.0</string>
+    <string>17.0</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>UIRequiredDeviceCapabilities</key>

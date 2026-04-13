@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "UnArchiver",
-    platforms: [.iOS(.v16)],
+    platforms: [.iOS(.v17)],
     dependencies: [
         .package(url: "https://github.com/tsolomko/SWCompression", from: "4.8.0"),
         .package(url: "https://github.com/raspu/Highlightr",       from: "2.2.0"),
