@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build (iOS Simulator)
+    name: Build (iOS)
     runs-on: macos-15
 
     steps:
@@ -29,15 +29,21 @@ jobs:
             -project UnArchiver.xcodeproj \
             -scheme UnArchiver
 
-      - name: Build app (simulator, no signing)
+      - name: Build app (no signing)
         run: |
           set -o pipefail
           xcodebuild build \
             -project UnArchiver.xcodeproj \
             -scheme UnArchiver \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination 'generic/platform=iOS' \
             -configuration Debug \
-            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            2>&1 | tee /tmp/build.log; STATUS=${PIPESTATUS[0]}; \
+          if [ $STATUS -ne 0 ]; then \
+            echo ""; \
+            echo "=== BUILD ERRORS ==="; \
+            grep -E "error:|BUILD FAILED" /tmp/build.log | head -40 || true; \
+          fi; \
+          exit $STATUS
