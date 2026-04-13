@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build (iOS)
+    name: Build (iOS Simulator)
     runs-on: macos-15
 
     steps:
@@ -29,14 +29,15 @@ jobs:
             -project UnArchiver.xcodeproj \
             -scheme UnArchiver
 
-      - name: Build app (no signing)
+      - name: Build app (simulator, no signing)
         run: |
           set -o pipefail
           xcodebuild build \
             -project UnArchiver.xcodeproj \
             -scheme UnArchiver \
-            -destination 'generic/platform=iOS' \
+            -destination 'generic/platform=iOS Simulator' \
             -configuration Debug \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
