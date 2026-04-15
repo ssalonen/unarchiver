@@ -46,6 +46,7 @@ enum ArchiveType: String, CaseIterable {
     case tarGzip = "TAR+GZip"
     case tarBzip2 = "TAR+BZip2"
     case tarXZ = "TAR+XZ"
+    case xz = "XZ"
     case zip = "ZIP"
     case unknown = "Unknown"
 
@@ -56,6 +57,7 @@ enum ArchiveType: String, CaseIterable {
         if name.hasSuffix(".tar.xz") || name.hasSuffix(".txz") { return .tarXZ }
         if name.hasSuffix(".tar") { return .tar }
         if name.hasSuffix(".gz") { return .gzip }
+        if name.hasSuffix(".xz") { return .xz }
         if name.hasSuffix(".zip") { return .zip }
         return .unknown
     }

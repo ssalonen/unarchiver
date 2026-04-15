@@ -1,0 +1,28 @@
+{
+  "name": "UnArchiver",
+  "identifier": "com.ssalonen.unarchiver.source",
+  "sourceURL": "https://raw.githubusercontent.com/ssalonen/unarchiver/main/altstore-source.json",
+  "apps": [
+    {
+      "name": "UnArchiver",
+      "bundleIdentifier": "com.yourcompany.unarchiver",
+      "developerName": "ssalonen",
+      "subtitle": "Open TAR, GZip, ZIP, XZ archives",
+      "localizedDescription": "View files inside TAR, GZip, BZip2, XZ, and ZIP archives directly on your iPhone.\n\nSupported formats:\n• .tar.gz / .tgz\n• .tar.bz2 / .tbz2\n• .tar.xz / .txz\n• .tar\n• .gz\n• .zip\n\nFeatures:\n• Opens directly from Files app and any share sheet\n• Built-in text viewer for source code, JSON, logs\n• Search within files\n• Share / export individual files",
+      "iconURL": "https://raw.githubusercontent.com/ssalonen/unarchiver/main/icon.png",
+      "tintColor": "007AFF",
+      "category": "utilities",
+      "versions": [
+        {
+          "version": "1.0",
+          "date": "2025-04-12T00:00:00+00:00",
+          "localizedDescription": "Initial release.",
+          "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.0/UnArchiver.ipa",
+          "size": 0,
+          "minOSVersion": "16.0"
+        }
+      ]
+    }
+  ],
+  "news": []
+}

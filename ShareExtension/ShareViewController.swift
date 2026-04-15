@@ -32,7 +32,6 @@ final class ShareViewController: UIViewController {
         let supportedTypes: [String] = [
             UTType.zip.identifier,
             UTType.gzip.identifier,
-            UTType.tar.identifier,
             "public.tar-archive",
             "public.gzip-archive",
             "org.gnu.gnu-tar-gzip-archive",

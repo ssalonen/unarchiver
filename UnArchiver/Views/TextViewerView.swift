@@ -12,6 +12,9 @@ struct TextViewerView: View {
     @State private var fontSize: CGFloat = 13
     @State private var shareItem: URL?
     @State private var showingShare = false
+    @State private var matchCount = 0
+
+    private var language: String? { TextDetector.highlightLanguage(for: entry.name) }
 
     var body: some View {
         Group {
@@ -42,6 +45,11 @@ struct TextViewerView: View {
                     Button { fontSize = min(24, fontSize + 1) } label: {
                         Label("Larger Text", systemImage: "textformat.size.larger")
                     }
+                    Divider()
+                    if let lang = language {
+                        Label(lang.capitalized, systemImage: "chevron.left.forwardslash.chevron.right")
+                            .foregroundStyle(.secondary)
+                    }
                 } label: {
                     Image(systemName: "textformat.size")
                 }
@@ -62,11 +70,12 @@ struct TextViewerView: View {
 
     @ViewBuilder
     private func textContent(_ content: String) -> some View {
-        let filtered = filteredLines(content)
         VStack(spacing: 0) {
             if !searchText.isEmpty {
                 HStack {
-                    Text("\(filtered.count) match\(filtered.count == 1 ? "" : "es")")
+                    Text(matchCount == 0
+                         ? "No matches"
+                         : "\(matchCount) match\(matchCount == 1 ? "" : "es")")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -76,12 +85,14 @@ struct TextViewerView: View {
                 .background(Color(.secondarySystemBackground))
             }
 
-            ScrollView([.vertical, .horizontal]) {
-                Text(filtered.joined(separator: "\n"))
-                    .font(.system(size: fontSize, design: .monospaced))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
+            SyntaxTextView(
+                code: content,
+                language: language,
+                fontSize: fontSize,
+                searchText: searchText
+            )
+            .onChange(of: searchText) { query in
+                updateMatchCount(in: content, query: query)
             }
         }
         .searchable(text: $searchText, prompt: "Search in file")
@@ -89,10 +100,15 @@ struct TextViewerView: View {
 
     // MARK: - Helpers
 
-    private func filteredLines(_ content: String) -> [String] {
-        let lines = content.components(separatedBy: "\n")
-        if searchText.isEmpty { return lines }
-        return lines.filter { $0.localizedCaseInsensitiveContains(searchText) }
+    private func updateMatchCount(in content: String, query: String) {
+        guard !query.isEmpty else { matchCount = 0; return }
+        var count = 0
+        var searchRange = content.startIndex..<content.endIndex
+        while let range = content.range(of: query, options: .caseInsensitive, range: searchRange) {
+            count += 1
+            searchRange = range.upperBound..<content.endIndex
+        }
+        matchCount = count
     }
 
     private func loadText() async {
@@ -120,7 +136,7 @@ struct TextViewerView: View {
             try text.data(using: .utf8)?.write(to: url)
             shareItem = url
             showingShare = true
-        } catch { }
+        } catch {}
     }
 
     private func hexDump(_ data: Data) -> String {
