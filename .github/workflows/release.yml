@@ -6,20 +6,24 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write   # needed to push altstore-source.json and create release
+
 jobs:
-  build:
-    runs-on: macos-15        # Xcode 16 — change to macos-14 for Xcode 15
+  release:
+    name: Build & Release IPA
+    runs-on: macos-15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: main   # check out main so we can push altstore-source.json back
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Select Xcode
         run: |
-          # List available Xcode versions and pick the latest
-          ls /Applications | grep Xcode
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
           xcodebuild -version
 
@@ -54,17 +58,17 @@ jobs:
 
       - name: Get version from tag
         run: |
-          VERSION="${GITHUB_REF#refs/tags/}"          # e.g. v1.2
-          VERSION_NUM="${VERSION#v}"                  # e.g. 1.2
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "VERSION_NUM=$VERSION_NUM" >> "$GITHUB_ENV"
+          TAG="${GITHUB_REF#refs/tags/}"        # e.g. v1.2
+          VERSION_NUM="${TAG#v}"                # e.g. 1.2
+          echo "TAG=$TAG"                       >> "$GITHUB_ENV"
+          echo "VERSION_NUM=$VERSION_NUM"       >> "$GITHUB_ENV"
 
       - name: Update altstore-source.json
         run: |
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/UnArchiver.ipa"
-          DATE="$(date -u +"%Y-%m-%dT%H:%M:%S+00:00")"
+          export DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/UnArchiver.ipa"
+          export DATE="$(date -u +"%Y-%m-%dT%H:%M:%S+00:00")"
 
-          python3 - <<PYEOF
+          python3 - <<'PYEOF'
           import json, os
 
           version_num  = os.environ["VERSION_NUM"]
@@ -77,51 +81,53 @@ jobs:
 
           app = source["apps"][0]
 
-          new_version = {
+          # Remove any existing entry for this version then prepend fresh one
+          app["versions"] = [v for v in app.get("versions", []) if v["version"] != version_num]
+          app["versions"].insert(0, {
               "version": version_num,
               "date": date,
               "localizedDescription": "See GitHub release notes.",
               "downloadURL": download_url,
               "size": ipa_size,
-              "minOSVersion": "16.0"
-          }
-
-          # Prepend so newest is first
-          app.setdefault("versions", []).insert(0, new_version)
+              "minOSVersion": "17.0",
+          })
 
           with open("altstore-source.json", "w") as f:
               json.dump(source, f, indent=2)
               f.write("\n")
 
-          print(f"Updated source to {version_num}")
+          print(f"Updated source to {version_num} ({ipa_size} bytes)")
           PYEOF
-        env:
-          DOWNLOAD_URL: "https://github.com/${{ github.repository }}/releases/download/${{ env.VERSION }}/UnArchiver.ipa"
-          DATE: "$(date -u +\"%Y-%m-%dT%H:%M:%S+00:00\")"
 
       - name: Commit updated source JSON
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           git add altstore-source.json
-          git commit -m "chore: update AltStore source for ${VERSION}"
-          git push origin HEAD:main
+          if git diff --cached --quiet; then
+            echo "No changes to altstore-source.json"
+          else
+            git commit -m "chore: update AltStore source for ${TAG}"
+            git push origin HEAD:main
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          name: "UnArchiver ${{ env.VERSION }}"
+          tag_name: ${{ env.TAG }}
+          name: "UnArchiver ${{ env.VERSION_NUM }}"
           body: |
             ## Install via SideStore / AltStore
 
-            **Add this source URL:**
+            **Add this source URL in SideStore/AltStore:**
             ```
             https://raw.githubusercontent.com/${{ github.repository }}/main/altstore-source.json
             ```
 
-            Or [download the IPA directly](https://github.com/${{ github.repository }}/releases/download/${{ env.VERSION }}/UnArchiver.ipa) and open it in SideStore/AltStore.
+            Or [download the IPA directly](https://github.com/${{ github.repository }}/releases/download/${{ env.TAG }}/UnArchiver.ipa) and open it in SideStore/AltStore.
 
             ---
-            *Unsigned IPA — SideStore/AltStore will sign it with your Apple ID.*
+            *Unsigned build — SideStore/AltStore will sign it with your Apple ID on install.*
           files: ${{ env.IPA_PATH }}
           fail_on_unmatched_files: true

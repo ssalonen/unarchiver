@@ -19,7 +19,7 @@
           "localizedDescription": "Initial release.",
           "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.0/UnArchiver.ipa",
           "size": 0,
-          "minOSVersion": "16.0"
+          "minOSVersion": "17.0"
         }
       ]
     }
