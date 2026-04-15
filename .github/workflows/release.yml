@@ -20,6 +20,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: main   # check out main so we can push altstore-source.json back
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Select Xcode
         run: |
@@ -102,6 +103,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           git add altstore-source.json
           if git diff --cached --quiet; then
             echo "No changes to altstore-source.json"
