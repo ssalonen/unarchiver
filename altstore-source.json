@@ -14,6 +14,14 @@
       "category": "utilities",
       "versions": [
         {
+          "version": "1.3",
+          "date": "2026-04-17T18:09:47+00:00",
+          "localizedDescription": "See GitHub release notes.",
+          "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.3/UnArchiver.ipa",
+          "size": 944721,
+          "minOSVersion": "17.0"
+        },
+        {
           "version": "1.2",
           "date": "2026-04-17T17:44:04+00:00",
           "localizedDescription": "See GitHub release notes.",
