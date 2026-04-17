@@ -12,6 +12,11 @@
       "iconURL": "https://raw.githubusercontent.com/ssalonen/unarchiver/main/icon.png",
       "tintColor": "007AFF",
       "category": "utilities",
+      "version": "1.0",
+      "versionDate": "2025-04-12T00:00:00+00:00",
+      "versionDescription": "Initial release.",
+      "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.0/UnArchiver.ipa",
+      "size": 0,
       "versions": [
         {
           "version": "1.0",

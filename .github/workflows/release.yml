@@ -82,16 +82,25 @@ jobs:
 
           app = source["apps"][0]
 
-          # Remove any existing entry for this version then prepend fresh one
-          app["versions"] = [v for v in app.get("versions", []) if v["version"] != version_num]
-          app["versions"].insert(0, {
+          new_entry = {
               "version": version_num,
               "date": date,
               "localizedDescription": "See GitHub release notes.",
               "downloadURL": download_url,
               "size": ipa_size,
               "minOSVersion": "17.0",
-          })
+          }
+
+          # Remove any existing entry for this version then prepend fresh one
+          app["versions"] = [v for v in app.get("versions", []) if v["version"] != version_num]
+          app["versions"].insert(0, new_entry)
+
+          # Top-level fields required by SideStore/AltStore to determine latest version
+          app["version"] = version_num
+          app["versionDate"] = date
+          app["versionDescription"] = "See GitHub release notes."
+          app["downloadURL"] = download_url
+          app["size"] = ipa_size
 
           import os, shutil
           with open("altstore-source.json", "w") as f:
