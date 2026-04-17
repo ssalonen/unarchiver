@@ -23,6 +23,13 @@ jobs:
           # The commit step will switch to main before pushing altstore-source.json.
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get version from tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"        # e.g. v1.2
+          VERSION_NUM="${TAG#v}"                # e.g. 1.2
+          echo "TAG=$TAG"                       >> "$GITHUB_ENV"
+          echo "VERSION_NUM=$VERSION_NUM"       >> "$GITHUB_ENV"
+
       - name: Select Xcode
         run: |
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
@@ -45,7 +52,9 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            DEVELOPMENT_TEAM=""
+            DEVELOPMENT_TEAM="" \
+            MARKETING_VERSION="${VERSION_NUM}" \
+            CURRENT_PROJECT_VERSION="${VERSION_NUM}"
 
       - name: Package IPA
         run: |
@@ -57,20 +66,13 @@ jobs:
           echo "IPA_PATH=$RUNNER_TEMP/UnArchiver.ipa" >> "$GITHUB_ENV"
           echo "IPA_SIZE=$(wc -c < UnArchiver.ipa | tr -d ' ')" >> "$GITHUB_ENV"
 
-      - name: Get version from tag
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"        # e.g. v1.2
-          VERSION_NUM="${TAG#v}"                # e.g. 1.2
-          echo "TAG=$TAG"                       >> "$GITHUB_ENV"
-          echo "VERSION_NUM=$VERSION_NUM"       >> "$GITHUB_ENV"
-
       - name: Update altstore-source.json
         run: |
           export DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/UnArchiver.ipa"
           export DATE="$(date -u +"%Y-%m-%dT%H:%M:%S+00:00")"
 
           python3 - <<'PYEOF'
-          import json, os
+          import json, os, shutil
 
           version_num  = os.environ["VERSION_NUM"]
           ipa_size     = int(os.environ["IPA_SIZE"])
@@ -102,7 +104,6 @@ jobs:
           app["downloadURL"] = download_url
           app["size"] = ipa_size
 
-          import os, shutil
           with open("altstore-source.json", "w") as f:
               json.dump(source, f, indent=2)
               f.write("\n")
