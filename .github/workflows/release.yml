@@ -19,7 +19,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: main   # check out main so we can push altstore-source.json back
+          # Check out the tag so the IPA is built with the correct version number.
+          # The commit step will switch to main before pushing altstore-source.json.
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Select Xcode
@@ -92,9 +93,12 @@ jobs:
               "minOSVersion": "17.0",
           })
 
+          import os, shutil
           with open("altstore-source.json", "w") as f:
               json.dump(source, f, indent=2)
               f.write("\n")
+          # Stash a copy so the commit step can apply it after switching to main
+          shutil.copy("altstore-source.json", os.path.join(os.environ["RUNNER_TEMP"], "altstore-source.json"))
 
           print(f"Updated source to {version_num} ({ipa_size} bytes)")
           PYEOF
@@ -104,6 +108,11 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          # Switch to main so the JSON update lands on the default branch
+          git fetch origin main
+          git checkout main
+          # Re-apply the Python-generated JSON (it was written on the tag checkout)
+          cp "$RUNNER_TEMP/altstore-source.json" altstore-source.json
           git add altstore-source.json
           if git diff --cached --quiet; then
             echo "No changes to altstore-source.json"
