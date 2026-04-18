@@ -71,7 +71,6 @@ jobs:
         with:
           scan-args: |-
             --lockfile=swift/packageresolved:Package.resolved
-        continue-on-error: true
 
   # ------------------------------------------------------------------ #
   #  3. Supply-chain check – verify package URLs haven't changed        #
