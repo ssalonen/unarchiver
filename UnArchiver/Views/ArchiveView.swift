@@ -2,7 +2,8 @@ import SwiftUI
 
 struct ArchiveView: View {
     @ObservedObject var archive: ArchiveFile
-    @Binding var currentArchive: ArchiveFile?
+    let close: () -> Void
+    let openFile: (URL) -> Void
     @State private var searchText = ""
     @State private var selectedEntry: ArchiveEntry?
     @State private var shareItems: [Any]?
@@ -27,7 +28,7 @@ struct ArchiveView: View {
         .task { await archive.load() }
         .sheet(item: $selectedEntry) { entry in
             NavigationStack {
-                TextViewerView(entry: entry, archive: archive)
+                TextViewerView(source: .archive(entry, archive))
             }
         }
         .sheet(isPresented: Binding(
@@ -43,11 +44,11 @@ struct ArchiveView: View {
         }
         .fileImporter(
             isPresented: $showingPicker,
-            allowedContentTypes: SupportedTypes.all,
+            allowedContentTypes: [.item],
             allowsMultipleSelection: false
         ) { result in
             if case .success(let urls) = result, let url = urls.first {
-                currentArchive = ArchiveFile(url: url)
+                openFile(url)
             }
         }
     }
@@ -69,7 +70,7 @@ struct ArchiveView: View {
         } description: {
             Text(error.localizedDescription)
         } actions: {
-            Button("Try Another File") { currentArchive = nil }
+            Button("Try Another File") { close() }
                 .buttonStyle(.bordered)
         }
     }
@@ -109,7 +110,7 @@ struct ArchiveView: View {
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
-            Button { currentArchive = nil } label: {
+            Button { close() } label: {
                 Label("Close", systemImage: "xmark.circle")
             }
         }
