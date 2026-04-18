@@ -156,6 +156,25 @@ enum TextDetector {
         return true
     }
 
+    /// Returns true when the first 512 bytes suggest binary content:
+    /// any null byte, or >10% non-printable control characters.
+    static func looksLikeBinary(_ data: Data) -> Bool {
+        let sample = data.prefix(512)
+        guard !sample.isEmpty else { return false }
+        var atypical = 0
+        for byte in sample {
+            switch byte {
+            case 0x00:                              // null byte → definitely binary
+                return true
+            case 0x09, 0x0A, 0x0D, 0x20...0x7E, 0x80...0xFF:
+                break                               // whitespace, printable ASCII, high bytes
+            default:                                // control chars 0x01–0x08, 0x0B, 0x0C, 0x0E–0x1F, 0x7F
+                atypical += 1
+            }
+        }
+        return Double(atypical) / Double(sample.count) > 0.10
+    }
+
     static func sfSymbol(for name: String) -> String {
         let ext = (name.lowercased() as NSString).pathExtension
         switch ext {

@@ -27,11 +27,15 @@ enum ContentSource {
     }
 }
 
+private enum ViewMode { case text, hex }
+
 struct TextViewerView: View {
     let source: ContentSource
     @Environment(\.dismiss) private var dismiss
 
-    @State private var text: String?
+    @State private var decodedText: String?
+    @State private var rawData: Data?
+    @State private var hexContent = ""
     @State private var loadError: String?
     @State private var isLoading = true
     @State private var language: String?
@@ -40,6 +44,13 @@ struct TextViewerView: View {
     @State private var matchCount = 0
     @State private var shareItem: URL?
     @State private var showingShare = false
+    @State private var viewMode: ViewMode = .text
+
+    private var canShowText: Bool { decodedText != nil }
+
+    private var displayedContent: String {
+        viewMode == .hex ? hexContent : (decodedText ?? "")
+    }
 
     var body: some View {
         Group {
@@ -52,8 +63,8 @@ struct TextViewerView: View {
                 } description: {
                     Text(error)
                 }
-            } else if let text {
-                textContent(text)
+            } else if rawData != nil {
+                textContent(displayedContent)
             }
         }
         .navigationTitle(source.displayName)
@@ -73,6 +84,14 @@ struct TextViewerView: View {
             Button("Done") { dismiss() }
         }
         ToolbarItemGroup(placement: .navigationBarTrailing) {
+            if rawData != nil {
+                Button {
+                    viewMode = viewMode == .hex ? .text : .hex
+                } label: {
+                    Image(systemName: viewMode == .hex ? "doc.text" : "hexagon")
+                }
+                .disabled(viewMode == .hex && !canShowText)
+            }
             Menu {
                 Button { fontSize = max(10, fontSize - 1) } label: {
                     Label("Smaller Text", systemImage: "textformat.size.smaller")
@@ -80,7 +99,7 @@ struct TextViewerView: View {
                 Button { fontSize = min(24, fontSize + 1) } label: {
                     Label("Larger Text", systemImage: "textformat.size.larger")
                 }
-                if let lang = language {
+                if let lang = language, viewMode == .text {
                     Divider()
                     Label(lang.capitalized, systemImage: "chevron.left.forwardslash.chevron.right")
                         .foregroundStyle(.secondary)
@@ -112,10 +131,19 @@ struct TextViewerView: View {
                 .padding(.vertical, 6)
                 .background(Color(.secondarySystemBackground))
             }
-            SyntaxTextView(code: content, language: language, fontSize: fontSize, searchText: searchText)
-                .onChange(of: searchText) { query in
-                    updateMatchCount(in: content, query: query)
-                }
+            SyntaxTextView(
+                code: content,
+                language: viewMode == .text ? language : nil,
+                fontSize: fontSize,
+                searchText: searchText
+            )
+            .onChange(of: searchText) { query in
+                updateMatchCount(in: content, query: query)
+            }
+            .onChange(of: viewMode) { _, _ in
+                searchText = ""
+                matchCount = 0
+            }
         }
         .searchable(text: $searchText, prompt: "Search in file")
     }
@@ -136,17 +164,22 @@ struct TextViewerView: View {
         isLoading = true
         do {
             let data = try await source.load()
-            let content: String
+            rawData = data
+            hexContent = buildHexDump(data)
+
             if let s = String(data: data, encoding: .utf8) {
-                content = s
+                decodedText = s
+                language = TextDetector.highlightLanguage(for: source.fileName)
+                    ?? TextDetector.sniffLanguage(from: s)
             } else if let s = String(data: data, encoding: .isoLatin1) {
-                content = s
-            } else {
-                content = hexDump(data)
+                decodedText = s
+                language = TextDetector.highlightLanguage(for: source.fileName)
+                    ?? TextDetector.sniffLanguage(from: s)
             }
-            text = content
-            language = TextDetector.highlightLanguage(for: source.fileName)
-                    ?? TextDetector.sniffLanguage(from: content)
+
+            if decodedText == nil || TextDetector.looksLikeBinary(data) {
+                viewMode = .hex
+            }
         } catch {
             loadError = error.localizedDescription
         }
@@ -154,26 +187,34 @@ struct TextViewerView: View {
     }
 
     private func handleShare() {
-        guard let text else { return }
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent(source.displayName)
-        try? text.data(using: .utf8)?.write(to: url)
+        let content = displayedContent
+        let filename = viewMode == .hex
+            ? source.displayName + ".hex.txt"
+            : source.displayName
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        try? content.data(using: .utf8)?.write(to: url)
         shareItem = url
         showingShare = true
     }
 
-    private func hexDump(_ data: Data) -> String {
-        var lines: [String] = ["<Binary file – showing hex dump>", ""]
+    private func buildHexDump(_ data: Data) -> String {
+        let limit = 65536
         let bytesPerRow = 16
-        for rowStart in stride(from: 0, to: min(data.count, 1024), by: bytesPerRow) {
-            let rowEnd = min(rowStart + bytesPerRow, data.count)
+        let end = min(data.count, limit)
+        var lines = [String]()
+        lines.reserveCapacity(end / bytesPerRow + 2)
+        for rowStart in stride(from: 0, to: end, by: bytesPerRow) {
+            let rowEnd = min(rowStart + bytesPerRow, end)
             let row = data[rowStart..<rowEnd]
             let offset = String(format: "%08X", rowStart)
             let hex = row.map { String(format: "%02X", $0) }.joined(separator: " ")
             let ascii = row.map { ($0 >= 0x20 && $0 < 0x7F) ? String(UnicodeScalar($0)) : "." }.joined()
             lines.append("\(offset)  \(hex.padding(toLength: 48, withPad: " ", startingAt: 0))  \(ascii)")
         }
-        if data.count > 1024 { lines.append("\n… (\(data.count - 1024) more bytes)") }
+        if data.count > limit {
+            lines.append("")
+            lines.append("… (\(data.count - limit) more bytes)")
+        }
         return lines.joined(separator: "\n")
     }
 }
