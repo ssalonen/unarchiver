@@ -70,7 +70,7 @@ jobs:
         uses: google/osv-scanner-action/osv-scanner-action@v2.3.5
         with:
           scan-args: |-
-            --lockfile=swift:Package.resolved
+            --lockfile=swift/packageresolved:Package.resolved
         continue-on-error: true
 
   # ------------------------------------------------------------------ #
