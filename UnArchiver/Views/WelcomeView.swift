@@ -37,42 +37,6 @@ struct WelcomeView: View {
                 .controlSize(.large)
             }
 
-            Spacer()
-
-            VStack(spacing: 6) {
-                Text("Supported formats")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .kerning(0.5)
-
-                let formats = [
-                    (".tar.gz / .tgz", "GZip-compressed TAR"),
-                    (".tar.bz2 / .tbz2", "BZip2-compressed TAR"),
-                    (".tar", "TAR archive"),
-                    (".zip", "ZIP archive"),
-                    (".gz", "GZip file"),
-                ]
-                VStack(spacing: 4) {
-                    ForEach(formats, id: \.0) { fmt in
-                        HStack {
-                            Text(fmt.0)
-                                .font(.caption.monospaced())
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Text(fmt.1)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.horizontal, 16)
-                    }
-                }
-                .padding(.vertical, 10)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .padding(.horizontal)
-            }
-
             Spacer(minLength: 24)
         }
         .fileImporter(
