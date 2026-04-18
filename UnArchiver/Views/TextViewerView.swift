@@ -40,6 +40,7 @@ struct TextViewerView: View {
     @State private var matchCount = 0
     @State private var shareItem: URL?
     @State private var showingShare = false
+    @State private var isAutoformatted = false
 
     var body: some View {
         Group {
@@ -53,7 +54,7 @@ struct TextViewerView: View {
                     Text(error)
                 }
             } else if let text {
-                textContent(text)
+                textContent(displayText(from: text))
             }
         }
         .navigationTitle(source.displayName)
@@ -88,10 +89,101 @@ struct TextViewerView: View {
             } label: {
                 Image(systemName: "textformat.size")
             }
+            if isFormattable {
+                Button { isAutoformatted.toggle() } label: {
+                    Image(systemName: "wand.and.sparkles")
+                        .foregroundStyle(isAutoformatted ? Color.accentColor : Color.secondary)
+                }
+            }
             Button { handleShare() } label: {
                 Image(systemName: "square.and.arrow.up")
             }
         }
+    }
+
+    // MARK: - Autoformat
+
+    private var isFormattable: Bool {
+        language == "json" || language == "xml"
+    }
+
+    private func displayText(from raw: String) -> String {
+        guard isAutoformatted else { return raw }
+        switch language {
+        case "json": return prettyJSON(raw) ?? raw
+        case "xml":  return prettyXML(raw)
+        default:     return raw
+        }
+    }
+
+    private func prettyJSON(_ raw: String) -> String? {
+        guard let data = raw.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data),
+              let formatted = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted]),
+              let result = String(data: formatted, encoding: .utf8) else { return nil }
+        return result
+    }
+
+    private func prettyXML(_ raw: String) -> String {
+        let indent = "  "
+        var result = ""
+        var depth = 0
+        var i = raw.startIndex
+
+        while i < raw.endIndex {
+            if raw[i] == "<" {
+                let afterBracket = raw.index(after: i)
+                let rest = raw[afterBracket...]
+
+                if rest.hasPrefix("!--") {
+                    if let endRange = raw.range(of: "-->", range: i..<raw.endIndex) {
+                        xmlAppend(&result, depth: depth, content: String(raw[i..<endRange.upperBound]), indent: indent)
+                        i = endRange.upperBound
+                        continue
+                    }
+                }
+
+                if rest.hasPrefix("![CDATA[") {
+                    if let endRange = raw.range(of: "]]>", range: i..<raw.endIndex) {
+                        xmlAppend(&result, depth: depth, content: String(raw[i..<endRange.upperBound]), indent: indent)
+                        i = endRange.upperBound
+                        continue
+                    }
+                }
+
+                guard let gtIndex = raw[i...].firstIndex(of: ">") else {
+                    result += String(raw[i...])
+                    break
+                }
+
+                let inner = String(raw[afterBracket..<gtIndex])
+                let tag = "<" + inner + ">"
+                let isClosing = inner.hasPrefix("/")
+                let isNonNesting = isClosing || inner.hasSuffix("/") || inner.hasPrefix("?") || inner.hasPrefix("!")
+
+                if isClosing { depth = max(0, depth - 1) }
+                xmlAppend(&result, depth: depth, content: tag, indent: indent)
+                if !isNonNesting { depth += 1 }
+
+                i = raw.index(after: gtIndex)
+            } else {
+                guard let ltIndex = raw[i...].firstIndex(of: "<") else {
+                    let text = String(raw[i...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !text.isEmpty { xmlAppend(&result, depth: depth, content: text, indent: indent) }
+                    break
+                }
+                let text = String(raw[i..<ltIndex]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !text.isEmpty { xmlAppend(&result, depth: depth, content: text, indent: indent) }
+                i = ltIndex
+            }
+        }
+
+        return result
+    }
+
+    private func xmlAppend(_ result: inout String, depth: Int, content: String, indent: String) {
+        if !result.isEmpty { result += "\n" }
+        result += String(repeating: indent, count: depth) + content
     }
 
     // MARK: - Text content
