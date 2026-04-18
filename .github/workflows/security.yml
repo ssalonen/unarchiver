@@ -75,8 +75,9 @@ jobs:
               pins = json.load(f)["pins"]
 
           queries = [
-              {"version": p["state"]["version"],
-               "package": {"name": p["location"], "ecosystem": "Swift"}}
+              {"package": {"purl": "pkg:swift/{}@{}".format(
+                  p["location"].removeprefix("https://"),
+                  p["state"]["version"])}}
               for p in pins
           ]
 
