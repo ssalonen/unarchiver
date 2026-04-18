@@ -13,8 +13,7 @@ struct TextViewerView: View {
     @State private var shareItem: URL?
     @State private var showingShare = false
     @State private var matchCount = 0
-
-    private var language: String? { TextDetector.highlightLanguage(for: entry.name) }
+    @State private var language: String? = nil
 
     var body: some View {
         Group {
@@ -115,13 +114,17 @@ struct TextViewerView: View {
         isLoading = true
         do {
             let data = try await archive.extractEntry(entry)
+            let content: String
             if let s = String(data: data, encoding: .utf8) {
-                text = s
+                content = s
             } else if let s = String(data: data, encoding: .isoLatin1) {
-                text = s
+                content = s
             } else {
-                text = hexDump(data)
+                content = hexDump(data)
             }
+            text = content
+            language = TextDetector.highlightLanguage(for: entry.name)
+                    ?? TextDetector.sniffLanguage(from: content)
         } catch {
             loadError = error
         }
