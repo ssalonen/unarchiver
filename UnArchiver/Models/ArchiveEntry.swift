@@ -12,6 +12,7 @@ struct ArchiveEntry: Identifiable, Hashable {
 
     var displayName: String { name.isEmpty ? path : name }
     var isTextFile: Bool { TextDetector.isLikelyText(name: name) }
+    var isQuickLookPreviewable: Bool { TextDetector.isQuickLookPreviewable(name: name) }
     var sizeString: String { ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file) }
     var icon: String {
         if isDirectory { return "folder" }
@@ -36,6 +37,17 @@ struct ArchiveEntry: Identifiable, Hashable {
 }
 
 enum TextDetector {
+    private static let quickLookExtensions: Set<String> = [
+        "pdf",
+        "png", "jpg", "jpeg", "gif", "webp", "heic", "heif", "tiff", "tif", "bmp", "ico",
+        "md", "markdown",
+    ]
+
+    static func isQuickLookPreviewable(name: String) -> Bool {
+        let ext = (name.lowercased() as NSString).pathExtension
+        return quickLookExtensions.contains(ext)
+    }
+
     private static let knownBinaryExtensions: Set<String> = [
         "png", "jpg", "jpeg", "gif", "webp", "heic", "tiff", "bmp", "ico",
         "mp4", "mov", "avi", "mkv", "m4v", "wmv",
