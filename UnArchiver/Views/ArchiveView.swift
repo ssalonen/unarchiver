@@ -6,6 +6,7 @@ struct ArchiveView: View {
     let openFile: (URL) -> Void
     @State private var searchText = ""
     @State private var selectedEntry: ArchiveEntry?
+    @State private var previewItem: PreviewItem?
     @State private var shareItems: [Any]?
     @State private var extractError: ExtractError?
     @State private var sortOrder: SortOrder = .name
@@ -29,6 +30,19 @@ struct ArchiveView: View {
         .sheet(item: $selectedEntry) { entry in
             NavigationStack {
                 TextViewerView(source: .archive(entry, archive))
+            }
+        }
+        .sheet(item: $previewItem) { item in
+            NavigationStack {
+                QuickLookPreviewView(url: item.url)
+                    .ignoresSafeArea()
+                    .navigationTitle(item.url.lastPathComponent)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") { previewItem = nil }
+                        }
+                    }
             }
         }
         .sheet(isPresented: Binding(
@@ -153,11 +167,25 @@ struct ArchiveView: View {
     // MARK: - Actions
 
     private func handleTap(_ entry: ArchiveEntry) {
-        guard entry.isTextFile else {
+        if entry.isQuickLookPreviewable {
+            handlePreview(entry)
+        } else if entry.isTextFile {
+            selectedEntry = entry
+        } else {
             handleShare(entry)
-            return
         }
-        selectedEntry = entry
+    }
+
+    private func handlePreview(_ entry: ArchiveEntry) {
+        Task {
+            do {
+                let data = try await archive.extractEntry(entry)
+                let url = writeToTemp(data: data, filename: entry.displayName)
+                await MainActor.run { previewItem = PreviewItem(url: url) }
+            } catch {
+                await MainActor.run { extractError = ExtractError(error) }
+            }
+        }
     }
 
     private func handleShare(_ entry: ArchiveEntry) {
@@ -182,6 +210,11 @@ struct ArchiveView: View {
     }
 
     enum SortOrder { case name, size, date }
+}
+
+struct PreviewItem: Identifiable {
+    let id = UUID()
+    let url: URL
 }
 
 struct ExtractError: Identifiable {

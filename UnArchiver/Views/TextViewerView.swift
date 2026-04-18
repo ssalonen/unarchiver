@@ -229,7 +229,7 @@ struct TextViewerView: View {
                 fontSize: fontSize,
                 searchText: searchText
             )
-            .onChange(of: searchText) { query in
+            .onChange(of: searchText) { _, query in
                 updateMatchCount(in: content, query: query)
             }
             .onChange(of: viewMode) { _, _ in
