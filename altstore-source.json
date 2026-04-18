@@ -8,7 +8,7 @@
       "bundleIdentifier": "com.yourcompany.unarchiver",
       "developerName": "ssalonen",
       "subtitle": "Open TAR, GZip, ZIP, XZ archives",
-      "localizedDescription": "View files inside TAR, GZip, BZip2, XZ, and ZIP archives directly on your iPhone.\n\nSupported formats:\n\u2022 .tar.gz / .tgz\n\u2022 .tar.bz2 / .tbz2\n\u2022 .tar.xz / .txz\n\u2022 .tar\n\u2022 .gz\n\u2022 .zip\n\nFeatures:\n\u2022 Opens directly from Files app and any share sheet\n\u2022 Built-in text viewer for source code, JSON, logs\n\u2022 Search within files\n\u2022 Share / export individual files",
+      "localizedDescription": "View files inside TAR, GZip, BZip2, XZ, and ZIP archives directly on your iPhone.\n\nSupported formats:\n• .tar.gz / .tgz\n• .tar.bz2 / .tbz2\n• .tar.xz / .txz\n• .tar\n• .gz\n• .zip\n\nFeatures:\n• Opens directly from Files app and any share sheet\n• Built-in text viewer for source code, JSON, logs\n• Search within files\n• Share / export individual files",
       "iconURL": "https://raw.githubusercontent.com/ssalonen/unarchiver/main/icon.png",
       "tintColor": "007AFF",
       "category": "utilities",
@@ -24,54 +24,6 @@
           "localizedDescription": "See GitHub release notes.",
           "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.6/UnArchiver.ipa",
           "size": 944784,
-          "minOSVersion": "17.0"
-        },
-        {
-          "version": "1.5",
-          "date": "2026-04-17T18:43:04+00:00",
-          "localizedDescription": "See GitHub release notes.",
-          "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.5/UnArchiver.ipa",
-          "size": 944720,
-          "minOSVersion": "17.0"
-        },
-        {
-          "version": "1.4",
-          "date": "2026-04-17T18:26:59+00:00",
-          "localizedDescription": "See GitHub release notes.",
-          "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.4/UnArchiver.ipa",
-          "size": 944720,
-          "minOSVersion": "17.0"
-        },
-        {
-          "version": "1.3",
-          "date": "2026-04-17T18:09:47+00:00",
-          "localizedDescription": "See GitHub release notes.",
-          "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.3/UnArchiver.ipa",
-          "size": 944721,
-          "minOSVersion": "17.0"
-        },
-        {
-          "version": "1.2",
-          "date": "2026-04-17T17:44:04+00:00",
-          "localizedDescription": "See GitHub release notes.",
-          "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.2/UnArchiver.ipa",
-          "size": 944721,
-          "minOSVersion": "17.0"
-        },
-        {
-          "version": "1.1",
-          "date": "2026-04-15T18:46:34+00:00",
-          "localizedDescription": "See GitHub release notes.",
-          "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.1/UnArchiver.ipa",
-          "size": 944721,
-          "minOSVersion": "17.0"
-        },
-        {
-          "version": "1.0",
-          "date": "2025-04-12T00:00:00+00:00",
-          "localizedDescription": "Initial release.",
-          "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.0/UnArchiver.ipa",
-          "size": 0,
           "minOSVersion": "17.0"
         }
       ]
