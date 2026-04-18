@@ -23,11 +23,20 @@ jobs:
       - name: List schemes
         run: xcodebuild -list -project UnArchiver.xcodeproj
 
+      - name: Cache SPM packages
+        uses: actions/cache@v4
+        with:
+          path: SourcePackages
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
       - name: Resolve Swift packages
         run: |
           xcodebuild -resolvePackageDependencies \
             -project UnArchiver.xcodeproj \
-            -scheme UnArchiver
+            -scheme UnArchiver \
+            -clonedSourcePackagesDirPath SourcePackages
 
       - name: Build app (simulator, no signing)
         run: |
@@ -37,6 +46,7 @@ jobs:
             -scheme UnArchiver \
             -destination 'generic/platform=iOS Simulator' \
             -configuration Debug \
+            -clonedSourcePackagesDirPath SourcePackages \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
