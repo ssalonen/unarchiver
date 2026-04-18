@@ -28,7 +28,7 @@ struct ArchiveView: View {
         .task { await archive.load() }
         .sheet(item: $selectedEntry) { entry in
             NavigationStack {
-                TextViewerView(entry: entry, archive: archive)
+                TextViewerView(source: .archive(entry, archive))
             }
         }
         .sheet(isPresented: Binding(

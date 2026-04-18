@@ -13,11 +13,19 @@ struct ContentView: View {
                     close: { currentArchive = nil },
                     openFile: openFile
                 )
-            } else if let url = currentPlainFile {
-                PlainTextView(url: url, close: { currentPlainFile = nil })
             } else {
                 WelcomeView(openFile: openFile)
                     .navigationBarHidden(true)
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { currentPlainFile != nil },
+            set: { if !$0 { currentPlainFile = nil } }
+        )) {
+            if let url = currentPlainFile {
+                NavigationStack {
+                    TextViewerView(source: .file(url))
+                }
             }
         }
     }
