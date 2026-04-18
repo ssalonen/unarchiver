@@ -66,11 +66,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Run OSV Scanner
-        uses: google/osv-scanner-action/osv-scanner-action@v2.3.5
-        with:
-          scan-args: |-
-            --lockfile=swift/packageresolved:Package.resolved
+      - name: Query OSV API for Swift dependencies
+        run: |
+          python3 - <<'PYEOF'
+          import json, sys, urllib.request
+
+          with open("Package.resolved") as f:
+              pins = json.load(f)["pins"]
+
+          queries = [
+              {"version": p["state"]["version"],
+               "package": {"name": p["location"], "ecosystem": "Swift"}}
+              for p in pins
+          ]
+
+          body = json.dumps({"queries": queries}).encode()
+          req = urllib.request.Request(
+              "https://api.osv.dev/v1/querybatch",
+              data=body,
+              headers={"Content-Type": "application/json"},
+          )
+          with urllib.request.urlopen(req) as resp:
+              results = json.loads(resp.read())["results"]
+
+          found = False
+          for pin, result in zip(pins, results):
+              vulns = result.get("vulns", [])
+              if vulns:
+                  found = True
+                  ids = ", ".join(v["id"] for v in vulns)
+                  print(f"VULNERABLE: {pin['identity']} {pin['state']['version']} — {ids}")
+              else:
+                  print(f"OK: {pin['identity']} {pin['state']['version']}")
+
+          if found:
+              sys.exit(1)
+          PYEOF
 
   # ------------------------------------------------------------------ #
   #  3. Supply-chain check – verify package URLs haven't changed        #
