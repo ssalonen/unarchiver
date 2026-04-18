@@ -29,6 +29,8 @@
          ============================================================ -->
     <key>MinimumOSVersion</key>
     <string>17.0</string>
+    <key>UILaunchScreen</key>
+    <dict/>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>UIRequiredDeviceCapabilities</key>
