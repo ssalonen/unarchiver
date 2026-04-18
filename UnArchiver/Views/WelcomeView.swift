@@ -38,6 +38,11 @@ struct WelcomeView: View {
             }
 
             Spacer(minLength: 24)
+
+            Text("v\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .padding(.bottom, 8)
         }
         .fileImporter(
             isPresented: $showingPicker,

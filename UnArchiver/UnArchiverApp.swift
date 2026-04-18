@@ -26,15 +26,24 @@ final class AppState: ObservableObject {
     @Published var currentPlainFile: URL?
 
     func open(url: URL) {
-        let accessing = url.startAccessingSecurityScopedResource()
-        if ArchiveType.detect(url: url) != .unknown {
+        // Share Extension sends unarchiver://open?path=<file-url>; extract the real URL
+        let fileURL: URL
+        if url.scheme == "unarchiver",
+           let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let pathStr = comps.queryItems?.first(where: { $0.name == "path" })?.value,
+           let resolved = URL(string: pathStr) {
+            fileURL = resolved
+        } else {
+            fileURL = url
+        }
+
+        if ArchiveType.detect(url: fileURL) != .unknown {
             currentPlainFile = nil
-            currentArchive = ArchiveFile(url: url)
+            currentArchive = ArchiveFile(url: fileURL)
         } else {
             currentArchive = nil
-            currentPlainFile = url
+            currentPlainFile = fileURL
         }
-        if accessing { url.stopAccessingSecurityScopedResource() }
     }
 
     /// Called from the Share Extension via an app group URL written to shared container

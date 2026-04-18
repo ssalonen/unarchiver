@@ -21,6 +21,7 @@ class ArchiveFile: ObservableObject {
         isLoading = true
         loadError = nil
         let url = self.url
+        let accessing = url.startAccessingSecurityScopedResource()
         do {
             let result = try await Task.detached(priority: .userInitiated) {
                 try ArchiveService.listEntries(url: url)
@@ -29,11 +30,14 @@ class ArchiveFile: ObservableObject {
         } catch {
             loadError = error
         }
+        if accessing { url.stopAccessingSecurityScopedResource() }
         isLoading = false
     }
 
     func extractEntry(_ entry: ArchiveEntry) async throws -> Data {
         let url = self.url
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
         return try await Task.detached(priority: .userInitiated) {
             try ArchiveService.extractEntry(entry, from: url)
         }.value
