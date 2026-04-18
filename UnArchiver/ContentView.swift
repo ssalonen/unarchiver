@@ -24,7 +24,19 @@ struct ContentView: View {
         )) {
             if let url = currentPlainFile {
                 NavigationStack {
-                    TextViewerView(source: .file(url))
+                    if TextDetector.isQuickLookPreviewable(name: url.lastPathComponent) {
+                        QuickLookPreviewView(url: url)
+                            .ignoresSafeArea()
+                            .navigationTitle(url.lastPathComponent)
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .navigationBarTrailing) {
+                                    Button("Done") { currentPlainFile = nil }
+                                }
+                            }
+                    } else {
+                        TextViewerView(source: .file(url))
+                    }
                 }
             }
         }
