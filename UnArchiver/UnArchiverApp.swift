@@ -58,7 +58,11 @@ final class AppState: ObservableObject {
 
 /// App Group constants shared between main app and Share Extension
 enum AppGroup {
-    static let identifier   = "group.com.yourcompany.unarchiver"
+    // Derived at runtime so resigners (e.g. SideStore/AltStore) that rewrite
+    // the bundle ID don't break the share-extension ↔ main-app handoff.
+    static var identifier: String {
+        "group.\(Bundle.main.bundleIdentifier ?? "com.yourcompany.unarchiver")"
+    }
     static let pendingFileKey = "pendingFileURL"
 }
 

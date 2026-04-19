@@ -8,6 +8,15 @@ import UniformTypeIdentifiers
 /// hands them off to the main app via a shared app-group container.
 final class ShareViewController: UIViewController {
 
+    // Derived at runtime so resigners (e.g. SideStore/AltStore) that rewrite
+    // the bundle ID don't break the share-extension ↔ main-app handoff.
+    // Extension bundle ID is "<main-id>.shareextension"; strip the last component.
+    private var appGroupIdentifier: String {
+        let id = Bundle.main.bundleIdentifier ?? "com.yourcompany.unarchiver.shareextension"
+        let mainID = id.split(separator: ".").dropLast().joined(separator: ".")
+        return "group.\(mainID)"
+    }
+
     // MARK: - Life cycle
 
     override func viewDidLoad() {
@@ -85,7 +94,7 @@ final class ShareViewController: UIViewController {
 
     private func writeDataToTemp(data: Data, filename: String) {
         guard let containerURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.yourcompany.unarchiver") else {
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
             done(error: "Could not obtain file URL")
             return
         }
@@ -103,7 +112,7 @@ final class ShareViewController: UIViewController {
 
     private func copyToSharedContainer(url: URL) {
         guard let containerURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.yourcompany.unarchiver") else {
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
             // Fallback: open directly if app group is not configured
             openMainApp(fileURL: url)
             return
@@ -127,7 +136,7 @@ final class ShareViewController: UIViewController {
 
     private func openMainApp(fileURL: URL) {
         // Store the URL in shared UserDefaults so the main app can pick it up
-        UserDefaults(suiteName: "group.com.yourcompany.unarchiver")?
+        UserDefaults(suiteName: appGroupIdentifier)?
             .set(fileURL.absoluteString, forKey: "pendingFileURL")
 
         // Build the URL scheme call: unarchiver://open?path=<encoded>
