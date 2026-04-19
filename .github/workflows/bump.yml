@@ -20,12 +20,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Bump version and push tag
+      - name: Bump patch version and push tag
         id: tag
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: patch
+        run: |
+          git fetch --tags
+          LATEST=$(git tag -l 'v*' | sort -V | tail -1)
+          if [[ -z "$LATEST" ]]; then
+            NEW_TAG="v1.0"
+          else
+            BASE="${LATEST#v}"
+            MAJOR="${BASE%.*}"
+            MINOR="${BASE##*.}"
+            NEW_TAG="v${MAJOR}.$((MINOR + 1))"
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
+          echo "new_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
 
   release:
     name: Release
