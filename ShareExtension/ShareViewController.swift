@@ -183,8 +183,17 @@ final class ShareViewController: UIViewController {
 
     private func done(error: String?) {
         if let error {
+            let containerAvailable = FileManager.default
+                .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) != nil
+            let diagnostics = """
+                \(error)
+
+                — Extension bundle: \(Bundle.main.bundleIdentifier ?? "unknown")
+                — App group: \(appGroupIdentifier)
+                — Container: \(containerAvailable ? "available" : "unavailable")
+                """
             let alert = UIAlertController(title: "Cannot Open",
-                                          message: error,
+                                          message: diagnostics,
                                           preferredStyle: .alert)
             alert.addAction(.init(title: "OK", style: .default) { [weak self] _ in
                 self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
