@@ -24,15 +24,8 @@
         <string>$(PRODUCT_MODULE_NAME).ShareViewController</string>
         <key>NSExtensionAttributes</key>
         <dict>
-            <!-- Allow the share sheet to appear when file-type items are shared -->
             <key>NSExtensionActivationRule</key>
-            <dict>
-                <key>NSExtensionActivationSupportsFileWithMaxCount</key>
-                <integer>1</integer>
-                <!-- Accept any single file -->
-                <key>NSExtensionActivationDictionaryVersion</key>
-                <integer>2</integer>
-            </dict>
+            <string>SUBQUERY(extensionItems, $extensionItem, SUBQUERY($extensionItem.attachments, $attachment, ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.zip-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "org.gnu.gnu-tar-gzip-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "org.bzip2.bzip2-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "org.tukaani.xz-archive").@count &gt;= 1).@count &gt;= 1</string>
         </dict>
     </dict>
 </dict>
