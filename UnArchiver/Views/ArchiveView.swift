@@ -26,7 +26,7 @@ struct ArchiveView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarItems }
         .searchable(text: $searchText, prompt: "Search files")
-        .task { await archive.load() }
+        .task(id: archive.id) { await archive.load() }
         .sheet(item: $selectedEntry) { entry in
             NavigationStack {
                 TextViewerView(source: .archive(entry, archive))

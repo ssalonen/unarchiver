@@ -2,7 +2,8 @@ import Foundation
 
 /// Represents an opened archive with its metadata and entries
 @MainActor
-class ArchiveFile: ObservableObject {
+class ArchiveFile: ObservableObject, Identifiable {
+    let id = UUID()
     let url: URL
     let archiveType: ArchiveType
     @Published var entries: [ArchiveEntry] = []
