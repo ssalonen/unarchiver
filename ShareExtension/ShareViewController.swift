@@ -84,21 +84,15 @@ final class ShareViewController: UIViewController {
     }
 
     private func writeDataToTemp(data: Data, filename: String) {
-        let fm = FileManager.default
-        // Prefer the shared app group container (readable by the main app).
-        // Fall back to the extension's own temp dir, mirroring copyToSharedContainer's behaviour.
-        let destURL: URL
-        if let containerURL = fm.containerURL(
-            forSecurityApplicationGroupIdentifier: "group.com.yourcompany.unarchiver") {
-            destURL = containerURL.appendingPathComponent(filename)
-        } else {
-            let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-            try? fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
-            destURL = tempDir.appendingPathComponent(filename)
+        guard let containerURL = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.yourcompany.unarchiver") else {
+            done(error: "Could not obtain file URL")
+            return
         }
+        let destURL = containerURL.appendingPathComponent(filename)
         do {
-            if fm.fileExists(atPath: destURL.path) {
-                try fm.removeItem(at: destURL)
+            if FileManager.default.fileExists(atPath: destURL.path) {
+                try FileManager.default.removeItem(at: destURL)
             }
             try data.write(to: destURL)
             openMainApp(fileURL: destURL)
