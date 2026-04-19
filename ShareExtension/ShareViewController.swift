@@ -81,10 +81,18 @@ final class ShareViewController: UIViewController {
                 if let url = item as? URL {
                     self?.copyToSharedContainer(url: url)
                 } else if let data = item as? Data {
-                    // Some providers (e.g. cloud storage) deliver file bytes directly
-                    // rather than a URL; write to a temp file and proceed normally.
-                    let filename = provider.suggestedName ?? "archive.zip"
-                    self?.writeDataToTemp(data: data, filename: filename)
+                    // Some providers (e.g. Mail) encode a file:// URL as UTF-8 bytes
+                    // instead of returning an NSURL. Detect that and use the URL path;
+                    // only fall back to treating the bytes as file content if it isn't.
+                    if let urlString = String(data: data, encoding: .utf8)?
+                            .trimmingCharacters(in: .whitespacesAndNewlines),
+                       urlString.hasPrefix("file://"),
+                       let fileURL = URL(string: urlString) {
+                        self?.copyToSharedContainer(url: fileURL)
+                    } else {
+                        let filename = provider.suggestedName ?? "archive.zip"
+                        self?.writeDataToTemp(data: data, filename: filename)
+                    }
                 } else {
                     self?.done(error: "Could not obtain file URL")
                 }
