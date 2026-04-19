@@ -19,7 +19,7 @@ permissions:
 jobs:
   release:
     name: Build & Release IPA
-    runs-on: macos-15
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
