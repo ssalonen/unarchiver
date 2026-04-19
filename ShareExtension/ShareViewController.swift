@@ -72,76 +72,39 @@ final class ShareViewController: UIViewController {
     }
 
     private func loadItem(provider: NSItemProvider, typeId: String) {
-        provider.loadItem(forTypeIdentifier: typeId, options: nil) { [weak self] item, error in
-            DispatchQueue.main.async {
-                if let error {
-                    self?.done(error: error.localizedDescription)
-                    return
+        // loadFileRepresentation always yields a file URL regardless of how the
+        // provider internally represents the data (URL, Data, cloud file, etc.).
+        // The temp file is only valid for the duration of the closure, so the
+        // copy to the shared container must happen synchronously here.
+        provider.loadFileRepresentation(forTypeIdentifier: typeId) { [weak self] tempURL, error in
+            guard let self else { return }
+            if let error {
+                DispatchQueue.main.async { self.done(error: error.localizedDescription) }
+                return
+            }
+            guard let tempURL else {
+                DispatchQueue.main.async { self.done(error: "Could not obtain file URL") }
+                return
+            }
+            let fm = FileManager.default
+            guard let containerURL = fm.containerURL(
+                forSecurityApplicationGroupIdentifier: self.appGroupIdentifier) else {
+                DispatchQueue.main.async { self.done(error: "Could not obtain file URL") }
+                return
+            }
+            let destURL = containerURL.appendingPathComponent(tempURL.lastPathComponent)
+            do {
+                if fm.fileExists(atPath: destURL.path) {
+                    try fm.removeItem(at: destURL)
                 }
-                if let url = item as? URL {
-                    self?.copyToSharedContainer(url: url)
-                } else if let data = item as? Data {
-                    // Some providers (e.g. Mail) encode a file:// URL as UTF-8 bytes
-                    // instead of returning an NSURL. Check the raw prefix and size first
-                    // (O(1)) to avoid an expensive full-data String construction for
-                    // large binary payloads that are clearly not URL strings.
-                    let fileURLPrefix = Data("file://".utf8)
-                    if data.count < 4096,
-                       data.starts(with: fileURLPrefix),
-                       let urlString = String(data: data, encoding: .utf8)?
-                               .trimmingCharacters(in: .whitespacesAndNewlines),
-                       let fileURL = URL(string: urlString) {
-                        self?.copyToSharedContainer(url: fileURL)
-                    } else {
-                        let filename = provider.suggestedName ?? "archive.zip"
-                        self?.writeDataToTemp(data: data, filename: filename)
-                    }
-                } else {
-                    self?.done(error: "Could not obtain file URL")
+                try fm.copyItem(at: tempURL, to: destURL)
+            } catch {
+                DispatchQueue.main.async {
+                    self.done(error: "Could not save shared file: \(error.localizedDescription)")
                 }
+                return
             }
-        }
-    }
-
-    private func writeDataToTemp(data: Data, filename: String) {
-        guard let containerURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
-            done(error: "Could not obtain file URL")
-            return
-        }
-        let destURL = containerURL.appendingPathComponent(filename)
-        do {
-            if FileManager.default.fileExists(atPath: destURL.path) {
-                try FileManager.default.removeItem(at: destURL)
-            }
-            try data.write(to: destURL)
-            openMainApp(fileURL: destURL)
-        } catch {
-            done(error: "Could not save shared file: \(error.localizedDescription)")
-        }
-    }
-
-    private func copyToSharedContainer(url: URL) {
-        guard let containerURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
-            // Fallback: open directly if app group is not configured
-            openMainApp(fileURL: url)
-            return
-        }
-
-        let destURL = containerURL.appendingPathComponent(url.lastPathComponent)
-        do {
-            _ = url.startAccessingSecurityScopedResource()
-            if FileManager.default.fileExists(atPath: destURL.path) {
-                try FileManager.default.removeItem(at: destURL)
-            }
-            try FileManager.default.copyItem(at: url, to: destURL)
-            url.stopAccessingSecurityScopedResource()
-            openMainApp(fileURL: destURL)
-        } catch {
-            url.stopAccessingSecurityScopedResource()
-            // Try to open the original URL directly
-            openMainApp(fileURL: url)
+            DispatchQueue.main.async { self.openMainApp(fileURL: destURL) }
         }
     }
 
