@@ -20,7 +20,7 @@ jobs:
   # ------------------------------------------------------------------ #
   codeql:
     name: CodeQL (Swift)
-    runs-on: macos-15
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
