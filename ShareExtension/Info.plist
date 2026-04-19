@@ -27,28 +27,7 @@
             <!-- Predicate-based rule so iOS shows this app in the share sheet
                  for the specific archive UTIs we support (including zip). -->
             <key>NSExtensionActivationRule</key>
-            <string>SUBQUERY(extensionItems, $extensionItem,
-  SUBQUERY($extensionItem.attachments, $attachment,
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.zip-archive"   ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "com.pkware.zip-archive" ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.tar-archive"   ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "org.gnu.gnu-tar-gzip-archive" ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.gzip-archive"  ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "org.gnu.gnu-zip-archive" ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "org.bzip2.bzip2-archive" ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.bzip2-archive" ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "org.tukaani.xz-archive" ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.plain-text"      ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.text"            ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.source-code"     ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.script"          ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.shell-script"    ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.json"            ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.xml"             ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.yaml"            ||
-    ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.data"
-  ).@count > 0
-).@count > 0</string>
+            <string>SUBQUERY(extensionItems, $extensionItem, SUBQUERY($extensionItem.attachments, $attachment, ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.zip-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "com.pkware.zip-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.tar-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "org.gnu.gnu-tar-gzip-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.gzip-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "org.gnu.gnu-zip-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "org.bzip2.bzip2-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.bzip2-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "org.tukaani.xz-archive" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.plain-text" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.text" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.source-code" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.script" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.shell-script" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.json" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.xml" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.yaml" OR ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.data").@count &gt; 0).@count &gt; 0</string>
         </dict>
     </dict>
 </dict>
