@@ -122,15 +122,22 @@ final class ShareViewController: UIViewController {
         guard let data = try? Data(contentsOf: url, options: .mappedIfSafe),
               data.prefix(6) == Data("bplist".utf8) else { return nil }
 
+        let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)
+
+        // Mail encodes ["file:///...", "", {}] — grab the first string element.
+        if let array = plist as? [Any],
+           let str = array.first as? String,
+           let resolved = URL(string: str) { return resolved }
+
+        // Simple plist string
+        if let str = plist as? String,
+           let resolved = URL(string: str) ?? URL(fileURLWithPath: str) as URL? { return resolved }
+
         // NSKeyedArchive of NSURL
         if let nsurl = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSURL.self, from: data) {
             return nsurl as URL
         }
-        // Simple plist string
-        if let str = (try? PropertyListSerialization.propertyList(
-                from: data, options: [], format: nil)) as? String {
-            return URL(string: str) ?? URL(fileURLWithPath: str)
-        }
+
         // URL bookmark data
         var stale = false
         return try? URL(resolvingBookmarkData: data, options: .withoutUI,
