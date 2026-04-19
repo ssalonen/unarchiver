@@ -61,12 +61,30 @@ final class ShareViewController: UIViewController {
                     self?.done(error: error.localizedDescription)
                     return
                 }
-                guard let url = item as? URL else {
+                if let url = item as? URL {
+                    self?.copyToSharedContainer(url: url)
+                } else if let data = item as? Data {
+                    // Some providers (e.g. cloud storage) deliver file bytes directly
+                    // rather than a URL; write to a temp file and proceed normally.
+                    let filename = provider.suggestedName ?? "archive.zip"
+                    self?.writeDataToTemp(data: data, filename: filename)
+                } else {
                     self?.done(error: "Could not obtain file URL")
-                    return
                 }
-                self?.copyToSharedContainer(url: url)
             }
+        }
+    }
+
+    private func writeDataToTemp(data: Data, filename: String) {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        do {
+            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            let tempURL = tempDir.appendingPathComponent(filename)
+            try data.write(to: tempURL)
+            copyToSharedContainer(url: tempURL)
+        } catch {
+            done(error: "Could not save shared file: \(error.localizedDescription)")
         }
     }
 
