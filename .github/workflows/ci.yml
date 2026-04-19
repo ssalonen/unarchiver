@@ -24,14 +24,16 @@ jobs:
         run: xcodebuild -list -project UnArchiver.xcodeproj
 
       - name: Cache SPM packages
+        id: spm-cache
         uses: actions/cache@v4
         with:
           path: SourcePackages
-          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved') }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('UnArchiver.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
 
       - name: Resolve Swift packages
+        if: steps.spm-cache.outputs.cache-hit != 'true'
         run: |
           xcodebuild -resolvePackageDependencies \
             -project UnArchiver.xcodeproj \
