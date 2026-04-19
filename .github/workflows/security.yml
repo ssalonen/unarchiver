@@ -59,9 +59,13 @@ jobs:
             -scheme UnArchiver \
             -destination 'generic/platform=iOS' \
             -clonedSourcePackagesDirPath SourcePackages \
+            -jobs $(sysctl -n hw.logicalcpu) \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            RUN_CLANG_STATIC_ANALYZER=NO \
+            ENABLE_TESTABILITY=NO
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
