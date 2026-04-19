@@ -8,6 +8,15 @@ import UniformTypeIdentifiers
 /// hands them off to the main app via a shared app-group container.
 final class ShareViewController: UIViewController {
 
+    // Derived at runtime so resigners (e.g. SideStore/AltStore) that rewrite
+    // the bundle ID don't break the share-extension ↔ main-app handoff.
+    // Extension bundle ID is "<main-id>.shareextension"; strip the last component.
+    private var appGroupIdentifier: String {
+        let id = Bundle.main.bundleIdentifier ?? "com.yourcompany.unarchiver.shareextension"
+        let mainID = id.split(separator: ".").dropLast().joined(separator: ".")
+        return "group.\(mainID)"
+    }
+
     // MARK: - Life cycle
 
     override func viewDidLoad() {
@@ -84,11 +93,9 @@ final class ShareViewController: UIViewController {
     }
 
     private func writeDataToTemp(data: Data, filename: String) {
-        // Write directly into the shared app group container so the main app
-        // can read it; a temp file in the extension sandbox would be inaccessible.
         guard let containerURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.yourcompany.unarchiver") else {
-            done(error: "Could not access shared container")
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+            done(error: "Could not obtain file URL")
             return
         }
         let destURL = containerURL.appendingPathComponent(filename)
@@ -105,7 +112,7 @@ final class ShareViewController: UIViewController {
 
     private func copyToSharedContainer(url: URL) {
         guard let containerURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.yourcompany.unarchiver") else {
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
             // Fallback: open directly if app group is not configured
             openMainApp(fileURL: url)
             return
@@ -129,7 +136,7 @@ final class ShareViewController: UIViewController {
 
     private func openMainApp(fileURL: URL) {
         // Store the URL in shared UserDefaults so the main app can pick it up
-        UserDefaults(suiteName: "group.com.yourcompany.unarchiver")?
+        UserDefaults(suiteName: appGroupIdentifier)?
             .set(fileURL.absoluteString, forKey: "pendingFileURL")
 
         // Build the URL scheme call: unarchiver://open?path=<encoded>
@@ -176,8 +183,17 @@ final class ShareViewController: UIViewController {
 
     private func done(error: String?) {
         if let error {
+            let containerAvailable = FileManager.default
+                .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) != nil
+            let diagnostics = """
+                \(error)
+
+                — Extension bundle: \(Bundle.main.bundleIdentifier ?? "unknown")
+                — App group: \(appGroupIdentifier)
+                — Container: \(containerAvailable ? "available" : "unavailable")
+                """
             let alert = UIAlertController(title: "Cannot Open",
-                                          message: error,
+                                          message: diagnostics,
                                           preferredStyle: .alert)
             alert.addAction(.init(title: "OK", style: .default) { [weak self] _ in
                 self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
