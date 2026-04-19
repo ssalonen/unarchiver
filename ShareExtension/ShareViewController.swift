@@ -84,13 +84,20 @@ final class ShareViewController: UIViewController {
     }
 
     private func writeDataToTemp(data: Data, filename: String) {
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
+        // Write directly into the shared app group container so the main app
+        // can read it; a temp file in the extension sandbox would be inaccessible.
+        guard let containerURL = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.yourcompany.unarchiver") else {
+            done(error: "Could not access shared container")
+            return
+        }
+        let destURL = containerURL.appendingPathComponent(filename)
         do {
-            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-            let tempURL = tempDir.appendingPathComponent(filename)
-            try data.write(to: tempURL)
-            copyToSharedContainer(url: tempURL)
+            if FileManager.default.fileExists(atPath: destURL.path) {
+                try FileManager.default.removeItem(at: destURL)
+            }
+            try data.write(to: destURL)
+            openMainApp(fileURL: destURL)
         } catch {
             done(error: "Could not save shared file: \(error.localizedDescription)")
         }
