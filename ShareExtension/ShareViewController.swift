@@ -82,11 +82,14 @@ final class ShareViewController: UIViewController {
                     self?.copyToSharedContainer(url: url)
                 } else if let data = item as? Data {
                     // Some providers (e.g. Mail) encode a file:// URL as UTF-8 bytes
-                    // instead of returning an NSURL. Detect that and use the URL path;
-                    // only fall back to treating the bytes as file content if it isn't.
-                    if let urlString = String(data: data, encoding: .utf8)?
-                            .trimmingCharacters(in: .whitespacesAndNewlines),
-                       urlString.hasPrefix("file://"),
+                    // instead of returning an NSURL. Check the raw prefix and size first
+                    // (O(1)) to avoid an expensive full-data String construction for
+                    // large binary payloads that are clearly not URL strings.
+                    let fileURLPrefix = Data("file://".utf8)
+                    if data.count < 4096,
+                       data.starts(with: fileURLPrefix),
+                       let urlString = String(data: data, encoding: .utf8)?
+                               .trimmingCharacters(in: .whitespacesAndNewlines),
                        let fileURL = URL(string: urlString) {
                         self?.copyToSharedContainer(url: fileURL)
                     } else {
