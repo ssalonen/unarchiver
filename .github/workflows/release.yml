@@ -1,64 +1,25 @@
 name: Build & Release
 
-# Trigger by pushing a version tag (git tag v1.0 && git push origin v1.0)
-# OR by bumping MARKETING_VERSION in the Xcode project on main.
+# Trigger by pushing a version tag: git tag v1.0 && git push origin v1.0
+# Also callable from bump.yml via workflow_call.
 on:
   push:
     tags:
       - 'v*'
-    branches: [main]
-    paths:
-      - 'UnArchiver.xcodeproj/project.pbxproj'
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.9)'
+        required: true
+        type: string
 
 permissions:
   contents: write   # needed to push altstore-source.json and create release
 
 jobs:
-  # Fast pre-check on ubuntu so we don't spin up a macOS runner unnecessarily.
-  prepare:
-    name: Determine version
-    runs-on: ubuntu-latest
-    outputs:
-      tag:         ${{ steps.ver.outputs.tag }}
-      version_num: ${{ steps.ver.outputs.version_num }}
-      skip:        ${{ steps.check.outputs.skip }}
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Resolve version
-        id: ver
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            TAG="${GITHUB_REF#refs/tags/}"
-          else
-            VN=$(grep -m1 'MARKETING_VERSION' UnArchiver.xcodeproj/project.pbxproj \
-                   | awk -F' = ' '{print $2}' | tr -d '; ')
-            TAG="v${VN}"
-          fi
-          echo "tag=$TAG"             >> "$GITHUB_OUTPUT"
-          echo "version_num=${TAG#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Skip if release already exists
-        id: check
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if gh release view "${{ steps.ver.outputs.tag }}" \
-               --repo "${{ github.repository }}" &>/dev/null 2>&1; then
-            echo "Release ${{ steps.ver.outputs.tag }} already exists – skipping."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
   release:
     name: Build & Release IPA
-    needs: prepare
-    if: needs.prepare.outputs.skip != 'true'
     runs-on: macos-15
-    env:
-      TAG:         ${{ needs.prepare.outputs.tag }}
-      VERSION_NUM: ${{ needs.prepare.outputs.version_num }}
 
     steps:
       - name: Checkout
@@ -68,6 +29,17 @@ jobs:
           # Check out the tag so the IPA is built with the correct version number.
           # The commit step will switch to main before pushing altstore-source.json.
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from tag
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="${{ inputs.tag }}"
+          fi
+          VERSION_NUM="${TAG#v}"
+          echo "TAG=$TAG"             >> "$GITHUB_ENV"
+          echo "VERSION_NUM=$VERSION_NUM" >> "$GITHUB_ENV"
 
       - name: Select Xcode
         run: |
