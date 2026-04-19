@@ -2,7 +2,7 @@ name: Security
 
 on:
   push:
-    branches: [main, "claude/**"]
+    branches: [main]
   pull_request:
     branches: [main]
   schedule:
@@ -35,11 +35,20 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
 
+      - name: Cache SPM packages
+        uses: actions/cache@v4
+        with:
+          path: SourcePackages
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
       - name: Resolve packages
         run: |
           xcodebuild -resolvePackageDependencies \
             -project UnArchiver.xcodeproj \
-            -scheme UnArchiver
+            -scheme UnArchiver \
+            -clonedSourcePackagesDirPath SourcePackages
 
       - name: Build (for CodeQL)
         run: |
@@ -47,6 +56,7 @@ jobs:
             -project UnArchiver.xcodeproj \
             -scheme UnArchiver \
             -destination 'generic/platform=iOS' \
+            -clonedSourcePackagesDirPath SourcePackages \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
@@ -66,12 +76,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Run OSV Scanner
-        uses: google/osv-scanner-action/osv-scanner-action@v2.3.5
-        with:
-          scan-args: |-
-            --lockfile=Package.resolved
-        continue-on-error: true
+      - name: Query OSV API for Swift dependencies
+        run: |
+          python3 - <<'PYEOF'
+          import json, sys, urllib.request
+
+          with open("Package.resolved") as f:
+              pins = json.load(f)["pins"]
+
+          queries = [
+              {"package": {"purl": "pkg:swift/{}@{}".format(
+                  p["location"].removeprefix("https://"),
+                  p["state"]["version"])}}
+              for p in pins
+          ]
+
+          body = json.dumps({"queries": queries}).encode()
+          req = urllib.request.Request(
+              "https://api.osv.dev/v1/querybatch",
+              data=body,
+              headers={"Content-Type": "application/json"},
+          )
+          with urllib.request.urlopen(req) as resp:
+              results = json.loads(resp.read())["results"]
+
+          found = False
+          for pin, result in zip(pins, results):
+              vulns = result.get("vulns", [])
+              if vulns:
+                  found = True
+                  ids = ", ".join(v["id"] for v in vulns)
+                  print(f"VULNERABLE: {pin['identity']} {pin['state']['version']} — {ids}")
+              else:
+                  print(f"OK: {pin['identity']} {pin['state']['version']}")
+
+          if found:
+              sys.exit(1)
+          PYEOF
 
   # ------------------------------------------------------------------ #
   #  3. Supply-chain check – verify package URLs haven't changed        #

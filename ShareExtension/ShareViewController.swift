@@ -38,7 +38,15 @@ final class ShareViewController: UIViewController {
             "org.gnu.gnu-zip-archive",
             "org.bzip2.bzip2-archive",
             "public.bzip2-archive",
-            "public.data",          // fallback for unrecognised archive types
+            "public.plain-text",
+            "public.text",
+            "public.source-code",
+            "public.script",
+            "public.shell-script",
+            "public.json",
+            "public.xml",
+            "public.yaml",
+            "public.data",          // fallback for unrecognised types
         ]
 
         for item in items {

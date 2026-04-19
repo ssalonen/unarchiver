@@ -1,10 +1,17 @@
 name: Build & Release
 
 # Trigger by pushing a version tag: git tag v1.0 && git push origin v1.0
+# Also callable from bump.yml via workflow_call.
 on:
   push:
     tags:
       - 'v*'
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.9)'
+        required: true
+        type: string
 
 permissions:
   contents: write   # needed to push altstore-source.json and create release
@@ -25,10 +32,14 @@ jobs:
 
       - name: Get version from tag
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"        # e.g. v1.2
-          VERSION_NUM="${TAG#v}"                # e.g. 1.2
-          echo "TAG=$TAG"                       >> "$GITHUB_ENV"
-          echo "VERSION_NUM=$VERSION_NUM"       >> "$GITHUB_ENV"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="${{ inputs.tag }}"
+          fi
+          VERSION_NUM="${TAG#v}"
+          echo "TAG=$TAG"             >> "$GITHUB_ENV"
+          echo "VERSION_NUM=$VERSION_NUM" >> "$GITHUB_ENV"
 
       - name: Select Xcode
         run: |

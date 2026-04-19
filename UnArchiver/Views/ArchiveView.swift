@@ -2,9 +2,11 @@ import SwiftUI
 
 struct ArchiveView: View {
     @ObservedObject var archive: ArchiveFile
-    @Binding var currentArchive: ArchiveFile?
+    let close: () -> Void
+    let openFile: (URL) -> Void
     @State private var searchText = ""
     @State private var selectedEntry: ArchiveEntry?
+    @State private var previewItem: PreviewItem?
     @State private var shareItems: [Any]?
     @State private var extractError: ExtractError?
     @State private var sortOrder: SortOrder = .name
@@ -24,10 +26,23 @@ struct ArchiveView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarItems }
         .searchable(text: $searchText, prompt: "Search files")
-        .task { await archive.load() }
+        .task(id: archive.id) { await archive.load() }
         .sheet(item: $selectedEntry) { entry in
             NavigationStack {
-                TextViewerView(entry: entry, archive: archive)
+                TextViewerView(source: .archive(entry, archive))
+            }
+        }
+        .sheet(item: $previewItem) { item in
+            NavigationStack {
+                QuickLookPreviewView(url: item.url)
+                    .ignoresSafeArea()
+                    .navigationTitle(item.url.lastPathComponent)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") { previewItem = nil }
+                        }
+                    }
             }
         }
         .sheet(isPresented: Binding(
@@ -43,11 +58,11 @@ struct ArchiveView: View {
         }
         .fileImporter(
             isPresented: $showingPicker,
-            allowedContentTypes: SupportedTypes.all,
+            allowedContentTypes: [.item],
             allowsMultipleSelection: false
         ) { result in
             if case .success(let urls) = result, let url = urls.first {
-                currentArchive = ArchiveFile(url: url)
+                openFile(url)
             }
         }
     }
@@ -69,7 +84,7 @@ struct ArchiveView: View {
         } description: {
             Text(error.localizedDescription)
         } actions: {
-            Button("Try Another File") { currentArchive = nil }
+            Button("Try Another File") { close() }
                 .buttonStyle(.bordered)
         }
     }
@@ -109,7 +124,7 @@ struct ArchiveView: View {
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
-            Button { currentArchive = nil } label: {
+            Button { close() } label: {
                 Label("Close", systemImage: "xmark.circle")
             }
         }
@@ -152,11 +167,25 @@ struct ArchiveView: View {
     // MARK: - Actions
 
     private func handleTap(_ entry: ArchiveEntry) {
-        guard entry.isTextFile else {
+        if entry.isQuickLookPreviewable {
+            handlePreview(entry)
+        } else if entry.isTextFile {
+            selectedEntry = entry
+        } else {
             handleShare(entry)
-            return
         }
-        selectedEntry = entry
+    }
+
+    private func handlePreview(_ entry: ArchiveEntry) {
+        Task {
+            do {
+                let data = try await archive.extractEntry(entry)
+                let url = writeToTemp(data: data, filename: entry.displayName)
+                await MainActor.run { previewItem = PreviewItem(url: url) }
+            } catch {
+                await MainActor.run { extractError = ExtractError(error) }
+            }
+        }
     }
 
     private func handleShare(_ entry: ArchiveEntry) {
@@ -181,6 +210,11 @@ struct ArchiveView: View {
     }
 
     enum SortOrder { case name, size, date }
+}
+
+struct PreviewItem: Identifiable {
+    let id = UUID()
+    let url: URL
 }
 
 struct ExtractError: Identifiable {

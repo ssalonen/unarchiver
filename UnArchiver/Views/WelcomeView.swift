@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct WelcomeView: View {
-    @Binding var currentArchive: ArchiveFile?
+    let openFile: (URL) -> Void
     @State private var showingPicker = false
     @State private var importError: ImportError?
 
@@ -30,7 +30,7 @@ struct WelcomeView: View {
                 Button {
                     showingPicker = true
                 } label: {
-                    Label("Open Archive…", systemImage: "folder")
+                    Label("Open", systemImage: "folder")
                         .frame(maxWidth: 280)
                 }
                 .buttonStyle(.borderedProminent)
@@ -38,16 +38,21 @@ struct WelcomeView: View {
             }
 
             Spacer(minLength: 24)
+
+            Text("v\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .padding(.bottom, 8)
         }
         .fileImporter(
             isPresented: $showingPicker,
-            allowedContentTypes: SupportedTypes.all,
+            allowedContentTypes: [.item],
             allowsMultipleSelection: false
         ) { result in
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
-                currentArchive = ArchiveFile(url: url)
+                openFile(url)
             case .failure(let error):
                 importError = ImportError(error)
             }

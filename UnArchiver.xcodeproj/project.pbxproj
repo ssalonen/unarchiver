@@ -27,6 +27,8 @@
 		AA070000000000000000000B /* ArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000B /* ArchiveView.swift */; };
 		AA070000000000000000000C /* FileRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000C /* FileRowView.swift */; };
 		AA070000000000000000000D /* TextViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000D /* TextViewerView.swift */; };
+		AA0700000000000000000044 /* QuickLookPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000001C /* QuickLookPreviewView.swift */; };
+
 		/* App resources */
 		AA070000000000000000000E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000E /* Assets.xcassets */; };
 		/* App frameworks */
@@ -79,6 +81,7 @@
 		AA060000000000000000000B /* ArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveView.swift; sourceTree = "<group>"; };
 		AA060000000000000000000C /* FileRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileRowView.swift; sourceTree = "<group>"; };
 		AA060000000000000000000D /* TextViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextViewerView.swift; sourceTree = "<group>"; };
+
 		AA060000000000000000000E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA060000000000000000000F /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		AA0600000000000000000010 /* libbz2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libbz2.tbd; path = usr/lib/libbz2.tbd; sourceTree = SDKROOT; };
@@ -86,6 +89,7 @@
 		AA0600000000000000000012 /* UnArchiver-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UnArchiver-Bridging-Header.h"; sourceTree = "<group>"; };
 		AA060000000000000000001A /* XZService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XZService.swift; sourceTree = "<group>"; };
 		AA060000000000000000001B /* SyntaxTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxTextView.swift; sourceTree = "<group>"; };
+		AA060000000000000000001C /* QuickLookPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookPreviewView.swift; sourceTree = "<group>"; };
 		/* Share extension */
 		AA0600000000000000000020 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AA0600000000000000000021 /* ShareExtension-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ShareExtension-Info.plist"; path = "ShareExtension/Info.plist"; sourceTree = "<group>"; };
@@ -181,7 +185,9 @@
 				AA060000000000000000000B /* ArchiveView.swift */,
 				AA060000000000000000000C /* FileRowView.swift */,
 				AA060000000000000000000D /* TextViewerView.swift */,
+
 				AA060000000000000000001B /* SyntaxTextView.swift */,
+				AA060000000000000000001C /* QuickLookPreviewView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -321,6 +327,8 @@
 				AA070000000000000000000B /* ArchiveView.swift in Sources */,
 				AA070000000000000000000C /* FileRowView.swift in Sources */,
 				AA070000000000000000000D /* TextViewerView.swift in Sources */,
+				AA0700000000000000000044 /* QuickLookPreviewView.swift in Sources */,
+
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

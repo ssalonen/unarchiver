@@ -188,6 +188,25 @@
                 <string>zip</string>
             </array>
         </dict>
+        <!-- Plain text / source code / any file -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Text File</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.plain-text</string>
+                <string>public.text</string>
+                <string>public.source-code</string>
+                <string>public.script</string>
+                <string>public.shell-script</string>
+                <string>public.json</string>
+                <string>public.xml</string>
+                <string>public.yaml</string>
+                <string>public.data</string>
+            </array>
+        </dict>
     </array>
 
     <!-- ============================================================

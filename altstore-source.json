@@ -12,12 +12,36 @@
       "iconURL": "https://raw.githubusercontent.com/ssalonen/unarchiver/main/icon.png",
       "tintColor": "007AFF",
       "category": "utilities",
-      "version": "1.8",
-      "versionDate": "2026-04-18T05:46:46+00:00",
+      "version": "2.0.2",
+      "versionDate": "2026-04-18T19:07:42+00:00",
       "versionDescription": "See GitHub release notes.",
-      "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.8/UnArchiver.ipa",
-      "size": 943611,
+      "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v2.0.2/UnArchiver.ipa",
+      "size": 1045215,
       "versions": [
+        {
+          "version": "2.0.2",
+          "date": "2026-04-18T19:07:42+00:00",
+          "localizedDescription": "See GitHub release notes.",
+          "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v2.0.2/UnArchiver.ipa",
+          "size": 1045215,
+          "minOSVersion": "17.0"
+        },
+        {
+          "version": "1.10",
+          "date": "2026-04-18T09:29:45+00:00",
+          "localizedDescription": "See GitHub release notes.",
+          "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.10/UnArchiver.ipa",
+          "size": 948280,
+          "minOSVersion": "17.0"
+        },
+        {
+          "version": "1.9",
+          "date": "2026-04-18T09:02:49+00:00",
+          "localizedDescription": "See GitHub release notes.",
+          "downloadURL": "https://github.com/ssalonen/unarchiver/releases/download/v1.9/UnArchiver.ipa",
+          "size": 946786,
+          "minOSVersion": "17.0"
+        },
         {
           "version": "1.8",
           "date": "2026-04-18T05:46:46+00:00",
