@@ -16,6 +16,8 @@ jobs:
   tag:
     name: Create version tag
     runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.version.outputs.new_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -47,3 +49,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "${{ steps.version.outputs.new_tag }}"
           git push origin "${{ steps.version.outputs.new_tag }}"
+
+  release:
+    name: Trigger release
+    needs: tag
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.tag.outputs.new_tag }}
+    permissions:
+      contents: write
