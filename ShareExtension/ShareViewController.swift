@@ -86,19 +86,27 @@ final class ShareViewController: UIViewController {
                 DispatchQueue.main.async { self.done(error: "Could not obtain file URL") }
                 return
             }
+            // Some providers (e.g. Mail) store items as a binary plist wrapping a
+            // file URL rather than writing actual file bytes to the temp location.
+            // Resolve to the real file before copying.
+            let sourceURL = self.resolveBplistURL(tempURL) ?? tempURL
+
             let fm = FileManager.default
             guard let containerURL = fm.containerURL(
                 forSecurityApplicationGroupIdentifier: self.appGroupIdentifier) else {
                 DispatchQueue.main.async { self.done(error: "Could not obtain file URL") }
                 return
             }
-            let destURL = containerURL.appendingPathComponent(tempURL.lastPathComponent)
+            let destURL = containerURL.appendingPathComponent(sourceURL.lastPathComponent)
             do {
+                _ = sourceURL.startAccessingSecurityScopedResource()
                 if fm.fileExists(atPath: destURL.path) {
                     try fm.removeItem(at: destURL)
                 }
-                try fm.copyItem(at: tempURL, to: destURL)
+                try fm.copyItem(at: sourceURL, to: destURL)
+                sourceURL.stopAccessingSecurityScopedResource()
             } catch {
+                sourceURL.stopAccessingSecurityScopedResource()
                 DispatchQueue.main.async {
                     self.done(error: "Could not save shared file: \(error.localizedDescription)")
                 }
@@ -106,6 +114,27 @@ final class ShareViewController: UIViewController {
             }
             DispatchQueue.main.async { self.openMainApp(fileURL: destURL) }
         }
+    }
+
+    /// If `url` points to a binary plist wrapping a file URL (a Mail quirk),
+    /// returns the wrapped URL; otherwise returns nil.
+    private func resolveBplistURL(_ url: URL) -> URL? {
+        guard let data = try? Data(contentsOf: url, options: .mappedIfSafe),
+              data.prefix(6) == Data("bplist".utf8) else { return nil }
+
+        // NSKeyedArchive of NSURL
+        if let nsurl = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSURL.self, from: data) {
+            return nsurl as URL
+        }
+        // Simple plist string
+        if let str = (try? PropertyListSerialization.propertyList(
+                from: data, options: [], format: nil)) as? String {
+            return URL(string: str) ?? URL(fileURLWithPath: str)
+        }
+        // URL bookmark data
+        var stale = false
+        return try? URL(resolvingBookmarkData: data, options: .withoutUI,
+                        relativeTo: nil, bookmarkDataIsStale: &stale)
     }
 
     private func openMainApp(fileURL: URL) {
