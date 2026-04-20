@@ -46,8 +46,10 @@ struct TextViewerView: View {
     @State private var showingShare = false
     @State private var viewMode: ViewMode = .text
     @State private var isAutoformatted = false
+    @State private var renderMarkdown = false
 
     private var canShowText: Bool { decodedText != nil }
+    private var isMarkdown: Bool { language == "markdown" && viewMode == .text }
 
     private var displayedContent: String {
         viewMode == .hex ? hexContent : displayText(from: decodedText ?? "")
@@ -92,6 +94,11 @@ struct TextViewerView: View {
                     Image(systemName: viewMode == .hex ? "doc.text" : "hexagon")
                 }
                 .disabled(viewMode == .hex && !canShowText)
+            }
+            if isMarkdown {
+                Button { renderMarkdown.toggle() } label: {
+                    Image(systemName: renderMarkdown ? "eye.slash" : "eye")
+                }
             }
             Menu {
                 Button { fontSize = max(10, fontSize - 1) } label: {
@@ -209,35 +216,39 @@ struct TextViewerView: View {
 
     @ViewBuilder
     private func textContent(_ content: String) -> some View {
-        VStack(spacing: 0) {
-            if !searchText.isEmpty {
-                HStack {
-                    Text(matchCount == 0
-                         ? "No matches"
-                         : "\(matchCount) match\(matchCount == 1 ? "" : "es")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
+        if renderMarkdown && isMarkdown {
+            MarkdownWebView(markdown: decodedText ?? content, fontSize: fontSize)
+        } else {
+            VStack(spacing: 0) {
+                if !searchText.isEmpty {
+                    HStack {
+                        Text(matchCount == 0
+                             ? "No matches"
+                             : "\(matchCount) match\(matchCount == 1 ? "" : "es")")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 6)
+                    .background(Color(.secondarySystemBackground))
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 6)
-                .background(Color(.secondarySystemBackground))
+                SyntaxTextView(
+                    code: content,
+                    language: viewMode == .text ? language : nil,
+                    fontSize: fontSize,
+                    searchText: searchText
+                )
+                .onChange(of: searchText) { _, query in
+                    updateMatchCount(in: content, query: query)
+                }
+                .onChange(of: viewMode) { _, _ in
+                    searchText = ""
+                    matchCount = 0
+                }
             }
-            SyntaxTextView(
-                code: content,
-                language: viewMode == .text ? language : nil,
-                fontSize: fontSize,
-                searchText: searchText
-            )
-            .onChange(of: searchText) { _, query in
-                updateMatchCount(in: content, query: query)
-            }
-            .onChange(of: viewMode) { _, _ in
-                searchText = ""
-                matchCount = 0
-            }
+            .searchable(text: $searchText, prompt: "Search in file")
         }
-        .searchable(text: $searchText, prompt: "Search in file")
     }
 
     // MARK: - Helpers
