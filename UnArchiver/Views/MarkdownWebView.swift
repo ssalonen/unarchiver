@@ -120,6 +120,32 @@ enum SimpleMarkdown {
         }
         func closeAll() { closeList(); closeBlockquote() }
 
+        // Split a `| a | b |` row into trimmed cell strings
+        func parseRow(_ line: String) -> [String] {
+            var s = line.trimmingCharacters(in: .whitespaces)
+            if s.hasPrefix("|") { s = String(s.dropFirst()) }
+            if s.hasSuffix("|") { s = String(s.dropLast()) }
+            return s.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+        }
+
+        // Returns true for separator rows like `|---|:---:|---:|`
+        func isTableSep(_ line: String) -> Bool {
+            let cells = parseRow(line)
+            guard !cells.isEmpty else { return false }
+            return cells.allSatisfy { c in
+                let t = c.trimmingCharacters(in: CharacterSet(charactersIn: ":"))
+                return !t.isEmpty && t.allSatisfy { $0 == "-" }
+            }
+        }
+
+        // Derives CSS text-align from a separator cell (`:---`, `:---:`, `---:`)
+        func colAlign(_ cell: String) -> String {
+            let l = cell.hasPrefix(":"), r = cell.hasSuffix(":")
+            if l && r { return "center" }
+            if r      { return "right" }
+            return "left"
+        }
+
         while i < lines.count {
             let raw = lines[i]
             let line = raw.trimmingCharacters(in: .whitespaces)
@@ -173,6 +199,35 @@ enum SimpleMarkdown {
 
             // Thematic break
             if isThematicBreak(line) { closeAll(); out += "<hr>\n"; i += 1; continue }
+
+            // GFM table: header row followed by a separator row
+            if line.contains("|"), i + 1 < lines.count, isTableSep(lines[i + 1].trimmingCharacters(in: .whitespaces)) {
+                closeAll()
+                let headers = parseRow(line)
+                let aligns  = parseRow(lines[i + 1].trimmingCharacters(in: .whitespaces)).map { colAlign($0) }
+                out += "<table>\n<thead>\n<tr>"
+                for (j, h) in headers.enumerated() {
+                    let align = j < aligns.count ? aligns[j] : "left"
+                    out += "<th style=\"text-align:\(align)\">\(renderInline(h))</th>"
+                }
+                out += "</tr>\n</thead>\n<tbody>\n"
+                i += 2
+                while i < lines.count {
+                    let row = lines[i].trimmingCharacters(in: .whitespaces)
+                    guard row.contains("|") else { break }
+                    let cells = parseRow(row)
+                    out += "<tr>"
+                    for j in 0..<max(headers.count, cells.count) {
+                        let cell  = j < cells.count ? cells[j] : ""
+                        let align = j < aligns.count ? aligns[j] : "left"
+                        out += "<td style=\"text-align:\(align)\">\(renderInline(cell))</td>"
+                    }
+                    out += "</tr>\n"
+                    i += 1
+                }
+                out += "</tbody>\n</table>\n"
+                continue
+            }
 
             // Blockquote
             if line.hasPrefix(">") {
