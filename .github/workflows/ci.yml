@@ -25,7 +25,7 @@ jobs:
 
       - name: Cache SPM packages
         id: spm-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: SourcePackages
           key: ${{ runner.os }}-spm-${{ hashFiles('UnArchiver.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
