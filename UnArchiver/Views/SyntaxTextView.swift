@@ -7,6 +7,7 @@ struct SyntaxTextView: UIViewRepresentable {
     let language: String?
     let fontSize: CGFloat
     let searchText: String
+    let wordWrap: Bool
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -23,11 +24,6 @@ struct SyntaxTextView: UIViewRepresentable {
         tv.autocapitalizationType = .none
         tv.dataDetectorTypes = []
         tv.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
-        // Allow the text view to size itself to content width so long lines
-        // are clipped by the parent scroll view rather than wrapped.
-        tv.textContainer.lineBreakMode = .byClipping
-        tv.textContainer.widthTracksTextView = false
-        tv.textContainer.size.width = CGFloat.greatestFiniteMagnitude
         return tv
     }
 
@@ -38,7 +34,8 @@ struct SyntaxTextView: UIViewRepresentable {
             language: language,
             fontSize: fontSize,
             theme: theme,
-            searchText: searchText
+            searchText: searchText,
+            wordWrap: wordWrap
         )
     }
 
@@ -57,11 +54,23 @@ struct SyntaxTextView: UIViewRepresentable {
             language: String?,
             fontSize: CGFloat,
             theme: String,
-            searchText: String
+            searchText: String,
+            wordWrap: Bool
         ) {
-            let key = "\(theme)-\(fontSize)-\(code.hashValue)-\(searchText)"
+            let key = "\(theme)-\(fontSize)-\(code.hashValue)-\(searchText)-\(wordWrap)"
             guard key != lastKey else { return }
             lastKey = key
+
+            if wordWrap {
+                tv.textContainer.lineBreakMode = .byWordWrapping
+                tv.textContainer.widthTracksTextView = true
+                tv.showsHorizontalScrollIndicator = false
+            } else {
+                tv.textContainer.lineBreakMode = .byClipping
+                tv.textContainer.widthTracksTextView = false
+                tv.textContainer.size.width = CGFloat.greatestFiniteMagnitude
+                tv.showsHorizontalScrollIndicator = true
+            }
 
             highlightr?.setTheme(to: theme)
 

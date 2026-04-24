@@ -46,6 +46,7 @@ struct TextViewerView: View {
     @State private var showingShare = false
     @State private var viewMode: ViewMode = .text
     @State private var isAutoformatted = false
+    @State private var wordWrap: Bool = true
 
     private var canShowText: Bool { decodedText != nil }
 
@@ -112,6 +113,11 @@ struct TextViewerView: View {
                 Button { isAutoformatted.toggle() } label: {
                     Image(systemName: "wand.and.sparkles")
                         .foregroundStyle(isAutoformatted ? Color.accentColor : Color.secondary)
+                }
+            }
+            if viewMode == .text {
+                Button { wordWrap.toggle() } label: {
+                    Image(systemName: wordWrap ? "arrow.left.and.right" : "text.alignleft")
                 }
             }
             Button { handleShare() } label: {
@@ -227,7 +233,8 @@ struct TextViewerView: View {
                 code: content,
                 language: viewMode == .text ? language : nil,
                 fontSize: fontSize,
-                searchText: searchText
+                searchText: searchText,
+                wordWrap: wordWrap
             )
             .onChange(of: searchText) { _, query in
                 updateMatchCount(in: content, query: query)
