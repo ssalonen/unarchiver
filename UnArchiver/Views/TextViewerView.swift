@@ -150,65 +150,73 @@ struct TextViewerView: View {
     }
 
     private func prettyXML(_ raw: String) -> String {
-        let indent = "  "
-        var result = ""
-        var depth = 0
-        var i = raw.startIndex
+        guard let data = raw.data(using: .utf8) else { return raw }
+        let delegate = XMLFormatDelegate()
+        let parser = XMLParser(data: data)
+        parser.delegate = delegate
+        parser.shouldProcessNamespaces = false
+        parser.shouldReportNamespacePrefixes = true
+        guard parser.parse() else { return raw }
 
-        while i < raw.endIndex {
-            if raw[i] == "<" {
-                let afterBracket = raw.index(after: i)
-                let rest = raw[afterBracket...]
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("<?xml"),
+           let decl = trimmed.components(separatedBy: "\n").first {
+            return decl.trimmingCharacters(in: .whitespacesAndNewlines) + "\n" + delegate.output
+        }
+        return delegate.output
+    }
 
-                if rest.hasPrefix("!--") {
-                    if let endRange = raw.range(of: "-->", range: i..<raw.endIndex) {
-                        xmlAppend(&result, depth: depth, content: String(raw[i..<endRange.upperBound]), indent: indent)
-                        i = endRange.upperBound
-                        continue
-                    }
-                }
+    // SAX delegate that produces compact XML: leaf elements stay on one line,
+    // container elements are expanded with two-space indentation.
+    private final class XMLFormatDelegate: NSObject, XMLParserDelegate {
+        var output = ""
+        private var depth = 0
+        private var pendingText = ""
+        private var hasChildrenStack: [Bool] = []
+        // Deferred newline after an opening tag — flushed once we know the
+        // element has children; consumed inline if it turns out to be a leaf.
+        private var openTagNeedsNewline = false
 
-                if rest.hasPrefix("![CDATA[") {
-                    if let endRange = raw.range(of: "]]>", range: i..<raw.endIndex) {
-                        xmlAppend(&result, depth: depth, content: String(raw[i..<endRange.upperBound]), indent: indent)
-                        i = endRange.upperBound
-                        continue
-                    }
-                }
+        func parser(_ parser: XMLParser, didStartElement name: String,
+                    namespaceURI: String?, qualifiedName qName: String?,
+                    attributes attrs: [String: String] = [:]) {
+            if openTagNeedsNewline { output += "\n"; openTagNeedsNewline = false }
+            let pending = pendingText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !pending.isEmpty { output += pad(depth) + pending + "\n" }
+            pendingText = ""
+            if !hasChildrenStack.isEmpty { hasChildrenStack[hasChildrenStack.count - 1] = true }
 
-                guard let gtIndex = raw[i...].firstIndex(of: ">") else {
-                    result += String(raw[i...])
-                    break
-                }
+            let attrStr = attrs.isEmpty ? "" : " " + attrs.sorted { $0.key < $1.key }
+                .map { "\($0.key)=\"\($0.value)\"" }.joined(separator: " ")
+            output += pad(depth) + "<\(qName ?? name)\(attrStr)>"
+            hasChildrenStack.append(false)
+            openTagNeedsNewline = true
+            depth += 1
+        }
 
-                let inner = String(raw[afterBracket..<gtIndex])
-                let tag = "<" + inner + ">"
-                let isClosing = inner.hasPrefix("/")
-                let isNonNesting = isClosing || inner.hasSuffix("/") || inner.hasPrefix("?") || inner.hasPrefix("!")
-
-                if isClosing { depth = max(0, depth - 1) }
-                xmlAppend(&result, depth: depth, content: tag, indent: indent)
-                if !isNonNesting { depth += 1 }
-
-                i = raw.index(after: gtIndex)
+        func parser(_ parser: XMLParser, didEndElement name: String,
+                    namespaceURI: String?, qualifiedName qName: String?) {
+            depth -= 1
+            let hadChildren = hasChildrenStack.removeLast()
+            let text = pendingText.trimmingCharacters(in: .whitespacesAndNewlines)
+            pendingText = ""
+            let tag = qName ?? name
+            if hadChildren {
+                if openTagNeedsNewline { output += "\n"; openTagNeedsNewline = false }
+                if !text.isEmpty { output += pad(depth + 1) + text + "\n" }
+                output += pad(depth) + "</\(tag)>\n"
             } else {
-                guard let ltIndex = raw[i...].firstIndex(of: "<") else {
-                    let text = String(raw[i...]).trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !text.isEmpty { xmlAppend(&result, depth: depth, content: text, indent: indent) }
-                    break
-                }
-                let text = String(raw[i..<ltIndex]).trimmingCharacters(in: .whitespacesAndNewlines)
-                if !text.isEmpty { xmlAppend(&result, depth: depth, content: text, indent: indent) }
-                i = ltIndex
+                openTagNeedsNewline = false
+                output += "\(text)</\(tag)>\n"
             }
         }
 
-        return result
-    }
+        func parser(_ parser: XMLParser, foundCharacters string: String) { pendingText += string }
+        func parser(_ parser: XMLParser, foundCDATABlock data: Data) {
+            if let s = String(data: data, encoding: .utf8) { pendingText += s }
+        }
 
-    private func xmlAppend(_ result: inout String, depth: Int, content: String, indent: String) {
-        if !result.isEmpty { result += "\n" }
-        result += String(repeating: indent, count: depth) + content
+        private func pad(_ n: Int) -> String { String(repeating: "  ", count: n) }
     }
 
     // MARK: - Text content
