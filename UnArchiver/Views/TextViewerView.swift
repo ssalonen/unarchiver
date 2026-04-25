@@ -244,7 +244,7 @@ struct TextViewerView: View {
         private func pad(_ n: Int) -> String { String(repeating: "  ", count: n) }
     }
 
-    // MARK: - Text content
+// MARK: - Text content
 
     @ViewBuilder
     private func textContent(_ content: String) -> some View {
@@ -262,29 +262,39 @@ struct TextViewerView: View {
                 .padding(.vertical, 6)
                 .background(Color(.secondarySystemBackground))
             }
-if previewMode == .rendered {
+            if previewMode == .rendered {
                 MarkdownPreviewView(markdown: content, fontSize: fontSize)
             } else {
-                SyntaxTextView(
-                    code: content,
-                    language: viewMode == .text ? language : nil,
-                    fontSize: fontSize,
-                    searchText: searchText,
-                    wordWrap: wordWrap,
-                    showWhitespace: showWhitespace,
-                    showIndentLines: showIndentLines
-                )
-                .fixedSize(horizontal: false, vertical: true)
-                .onChange(of: searchText) { _, query in
-                    updateMatchCount(in: content, query: query)
-                }
-                .onChange(of: viewMode) { _, _ in
-                    searchText = ""
-                    matchCount = 0
-                }
+                syntaxTextView(content)
             }
         }
         .searchable(text: $searchText, prompt: "Search in file")
+    }
+
+    @ViewBuilder
+    private func syntaxTextView(_ content: String) -> some View {
+        if wordWrap {
+            SyntaxTextView(
+                code: content,
+                language: viewMode == .text ? language : nil,
+                fontSize: fontSize,
+                searchText: searchText,
+                wordWrap: true,
+                showWhitespace: showWhitespace,
+                showIndentLines: showIndentLines
+            )
+            .frame(minWidth: 0, maxWidth: .infinity)
+        } else {
+            SyntaxTextView(
+                code: content,
+                language: viewMode == .text ? language : nil,
+                fontSize: fontSize,
+                searchText: searchText,
+                wordWrap: false,
+                showWhitespace: showWhitespace,
+                showIndentLines: showIndentLines
+            )
+        }
     }
 
     // MARK: - Helpers
