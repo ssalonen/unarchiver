@@ -26,6 +26,7 @@ struct SyntaxTextView: UIViewRepresentable {
         tv.autocapitalizationType = .none
         tv.dataDetectorTypes = []
         tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         tv.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
         // Allow the text view to size itself to content width so long lines
         // are clipped by the parent scroll view rather than wrapped.
