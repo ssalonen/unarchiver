@@ -283,7 +283,6 @@ if previewMode == .rendered {
                     matchCount = 0
                 }
             }
-            }
         }
         .searchable(text: $searchText, prompt: "Search in file")
     }
