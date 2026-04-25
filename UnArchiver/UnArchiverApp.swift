@@ -7,7 +7,11 @@ struct UnArchiverApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(currentArchive: $appState.currentArchive)
+            ContentView(
+                currentArchive: $appState.currentArchive,
+                currentPlainFile: $appState.currentPlainFile,
+                openFile: appState.open
+            )
                 .onOpenURL { url in
                     appState.open(url: url)
                 }
@@ -19,14 +23,27 @@ struct UnArchiverApp: App {
 @MainActor
 final class AppState: ObservableObject {
     @Published var currentArchive: ArchiveFile?
+    @Published var currentPlainFile: URL?
 
-    /// Open a URL that may be a security-scoped bookmark or a plain file URL
     func open(url: URL) {
-        // Start security-scoped access if needed
-        let accessing = url.startAccessingSecurityScopedResource()
-        let archive = ArchiveFile(url: url)
-        if accessing { url.stopAccessingSecurityScopedResource() }
-        currentArchive = archive
+        // Share Extension sends unarchiver://open?path=<file-url>; extract the real URL
+        let fileURL: URL
+        if url.scheme == "unarchiver",
+           let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let pathStr = comps.queryItems?.first(where: { $0.name == "path" })?.value,
+           let resolved = URL(string: pathStr) {
+            fileURL = resolved
+        } else {
+            fileURL = url
+        }
+
+        if ArchiveType.detect(url: fileURL) != .unknown {
+            currentPlainFile = nil
+            currentArchive = ArchiveFile(url: fileURL)
+        } else {
+            currentArchive = nil
+            currentPlainFile = fileURL
+        }
     }
 
     /// Called from the Share Extension via an app group URL written to shared container
@@ -41,7 +58,11 @@ final class AppState: ObservableObject {
 
 /// App Group constants shared between main app and Share Extension
 enum AppGroup {
-    static let identifier   = "group.com.yourcompany.unarchiver"
+    // Derived at runtime so resigners (e.g. SideStore/AltStore) that rewrite
+    // the bundle ID don't break the share-extension ↔ main-app handoff.
+    static var identifier: String {
+        "group.\(Bundle.main.bundleIdentifier ?? "com.yourcompany.unarchiver")"
+    }
     static let pendingFileKey = "pendingFileURL"
 }
 

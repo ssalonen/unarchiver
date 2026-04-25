@@ -12,7 +12,7 @@
 		/* Highlightr package product */
 		AA0700000000000000000042 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = AA0900000000000000000004 /* Highlightr */; };
 		AA0700000000000000000043 /* SyntaxTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000001B /* SyntaxTextView.swift */; };
-		AA0700000000000000000044 /* DocumentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000001C /* DocumentNode.swift */; };
+		AA0700000000000000000048 /* DocumentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000022 /* DocumentNode.swift */; };
 		AA0700000000000000000045 /* DocumentParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000001D /* DocumentParser.swift */; };
 		AA0700000000000000000046 /* DocumentNavigatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000001E /* DocumentNavigatorView.swift */; };
 		AA0700000000000000000047 /* ScrollMiniMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000001F /* ScrollMiniMapView.swift */; };
@@ -31,6 +31,8 @@
 		AA070000000000000000000B /* ArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000B /* ArchiveView.swift */; };
 		AA070000000000000000000C /* FileRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000C /* FileRowView.swift */; };
 		AA070000000000000000000D /* TextViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000D /* TextViewerView.swift */; };
+		AA0700000000000000000044 /* QuickLookPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000001C /* QuickLookPreviewView.swift */; };
+
 		/* App resources */
 		AA070000000000000000000E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000E /* Assets.xcassets */; };
 		/* App frameworks */
@@ -83,6 +85,7 @@
 		AA060000000000000000000B /* ArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveView.swift; sourceTree = "<group>"; };
 		AA060000000000000000000C /* FileRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileRowView.swift; sourceTree = "<group>"; };
 		AA060000000000000000000D /* TextViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextViewerView.swift; sourceTree = "<group>"; };
+
 		AA060000000000000000000E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA060000000000000000000F /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		AA0600000000000000000010 /* libbz2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libbz2.tbd; path = usr/lib/libbz2.tbd; sourceTree = SDKROOT; };
@@ -90,7 +93,8 @@
 		AA0600000000000000000012 /* UnArchiver-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UnArchiver-Bridging-Header.h"; sourceTree = "<group>"; };
 		AA060000000000000000001A /* XZService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XZService.swift; sourceTree = "<group>"; };
 		AA060000000000000000001B /* SyntaxTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxTextView.swift; sourceTree = "<group>"; };
-		AA060000000000000000001C /* DocumentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentNode.swift; sourceTree = "<group>"; };
+		AA060000000000000000001C /* QuickLookPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookPreviewView.swift; sourceTree = "<group>"; };
+		AA0600000000000000000022 /* DocumentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentNode.swift; sourceTree = "<group>"; };
 		AA060000000000000000001D /* DocumentParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentParser.swift; sourceTree = "<group>"; };
 		AA060000000000000000001E /* DocumentNavigatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentNavigatorView.swift; sourceTree = "<group>"; };
 		AA060000000000000000001F /* ScrollMiniMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollMiniMapView.swift; sourceTree = "<group>"; };
@@ -178,7 +182,7 @@
 			children = (
 				AA0600000000000000000003 /* ArchiveEntry.swift */,
 				AA0600000000000000000004 /* ArchiveFile.swift */,
-				AA060000000000000000001C /* DocumentNode.swift */,
+				AA0600000000000000000022 /* DocumentNode.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -190,7 +194,9 @@
 				AA060000000000000000000B /* ArchiveView.swift */,
 				AA060000000000000000000C /* FileRowView.swift */,
 				AA060000000000000000000D /* TextViewerView.swift */,
-				AA060000000000000000001B /* SyntaxTextView.swift */,
+
+			AA060000000000000000001B /* SyntaxTextView.swift */,
+				AA060000000000000000001C /* QuickLookPreviewView.swift */,
 				AA060000000000000000001E /* DocumentNavigatorView.swift */,
 				AA060000000000000000001F /* ScrollMiniMapView.swift */,
 			);
@@ -333,7 +339,8 @@
 				AA070000000000000000000B /* ArchiveView.swift in Sources */,
 				AA070000000000000000000C /* FileRowView.swift in Sources */,
 				AA070000000000000000000D /* TextViewerView.swift in Sources */,
-				AA0700000000000000000044 /* DocumentNode.swift in Sources */,
+			AA0700000000000000000044 /* QuickLookPreviewView.swift in Sources */,
+				AA0700000000000000000048 /* DocumentNode.swift in Sources */,
 				AA0700000000000000000045 /* DocumentParser.swift in Sources */,
 				AA0700000000000000000046 /* DocumentNavigatorView.swift in Sources */,
 				AA0700000000000000000047 /* ScrollMiniMapView.swift in Sources */,
@@ -479,6 +486,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = UnArchiver/UnArchiver.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -504,6 +512,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = UnArchiver/UnArchiver.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -528,6 +537,7 @@
 		AA0300000000000000000005 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -550,6 +560,7 @@
 		AA0300000000000000000006 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;

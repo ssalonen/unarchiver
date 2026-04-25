@@ -1,19 +1,51 @@
 import SwiftUI
 
+enum ContentSource {
+    case archive(ArchiveEntry, ArchiveFile)
+    case file(URL)
+
+    var displayName: String {
+        switch self {
+        case .archive(let entry, _): return entry.displayName
+        case .file(let url):         return url.lastPathComponent
+        }
+    }
+
+    var fileName: String { displayName }
+
+    func load() async throws -> Data {
+        switch self {
+        case .archive(let entry, let archive):
+            return try await archive.extractEntry(entry)
+        case .file(let url):
+            return try await Task.detached(priority: .userInitiated) {
+                let accessing = url.startAccessingSecurityScopedResource()
+                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+                return try Data(contentsOf: url)
+            }.value
+        }
+    }
+}
+
+private enum ViewMode { case text, hex }
+
 struct TextViewerView: View {
-    let entry: ArchiveEntry
-    @ObservedObject var archive: ArchiveFile
+    let source: ContentSource
     @Environment(\.dismiss) private var dismiss
 
-    @State private var text: String?
-    @State private var loadError: Error?
+    @State private var decodedText: String?
+    @State private var rawData: Data?
+    @State private var hexContent = ""
+    @State private var loadError: String?
     @State private var isLoading = true
-    @State private var searchText = ""
+    @State private var language: String?
     @State private var fontSize: CGFloat = 13
+    @State private var searchText = ""
+    @State private var matchCount = 0
     @State private var shareItem: URL?
     @State private var showingShare = false
-    @State private var matchCount = 0
-    @State private var language: String? = nil
+    @State private var viewMode: ViewMode = .text
+    @State private var isAutoformatted = false
 
     // Navigator
     @State private var navigatorNodes: [DocumentNode]? = nil
@@ -24,8 +56,18 @@ struct TextViewerView: View {
     @State private var scrollFraction: CGFloat = 0
     @State private var visibleFraction: CGFloat = 0.2
 
-    private var isStructured: Bool {
-        ["json", "xml", "yaml", "toml", "ini"].contains(language ?? "")
+    private var canShowText: Bool { decodedText != nil }
+
+    private var displayedContent: String {
+        viewMode == .hex ? hexContent : displayText(from: decodedText ?? "")
+    }
+
+    // Navigator shown only in plain text mode (autoformat changes line numbers)
+    private var isStructuredTextMode: Bool {
+        guard viewMode == .text, !isAutoformatted,
+              let lang = language else { return false }
+        return ["json", "xml", "yaml", "toml", "ini"].contains(lang)
+            && navigatorNodes != nil
     }
 
     var body: some View {
@@ -37,93 +79,102 @@ struct TextViewerView: View {
                 ContentUnavailableView {
                     Label("Cannot Preview", systemImage: "exclamationmark.triangle")
                 } description: {
-                    Text(error.localizedDescription)
+                    Text(error)
                 }
-            } else if let text {
-                mainContent(text)
+            } else if rawData != nil {
+                mainContent(displayedContent)
             }
         }
-        .navigationTitle(entry.displayName)
+        .navigationTitle(source.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarItems }
-        .task { await loadText() }
+        .task { await loadContent() }
         .sheet(isPresented: $showingShare) {
-            if let url = shareItem {
-                ShareSheet(items: [url as Any])
-            }
+            if let item = shareItem { ShareSheet(items: [item as Any]) }
         }
     }
 
-    // MARK: - Main layout
+    // MARK: - Layout routing
 
     @ViewBuilder
     private func mainContent(_ content: String) -> some View {
-        VStack(spacing: 0) {
-            if !searchText.isEmpty {
-                matchBar
-            }
-            if isStructured {
-                structuredLayout(content)
-            } else {
-                plainLayout(content)
-            }
+        if isStructuredTextMode {
+            structuredLayout(content)
+        } else {
+            textContent(content)
         }
-        .searchable(text: $searchText, prompt: "Search in file")
-        .onChange(of: searchText) { query in updateMatchCount(in: content, query: query) }
     }
 
     // 1/4 navigator | 3/4 document + right-edge minimap
     private func structuredLayout(_ content: String) -> some View {
         GeometryReader { geo in
-            HStack(spacing: 0) {
-                if showNavigator, let nodes = navigatorNodes {
-                    DocumentNavigatorView(nodes: nodes) { line in
-                        scrollTarget = NavigatorScrollTarget(line: line)
-                    }
-                    .frame(width: geo.size.width / 4)
-
-                    Divider()
-                }
-
-                ZStack(alignment: .trailing) {
-                    SyntaxTextView(
-                        code: content,
-                        language: language,
-                        fontSize: fontSize,
-                        searchText: searchText,
-                        scrollTarget: scrollTarget,
-                        onScrollChange: { frac, vis in
-                            scrollFraction = frac
-                            visibleFraction = vis
+            VStack(spacing: 0) {
+                if !searchText.isEmpty { matchBar(for: content) }
+                HStack(spacing: 0) {
+                    if showNavigator, let nodes = navigatorNodes {
+                        DocumentNavigatorView(nodes: nodes) { line in
+                            scrollTarget = NavigatorScrollTarget(line: line)
                         }
-                    )
-
-                    ScrollMiniMapView(
-                        scrollFraction: $scrollFraction,
-                        visibleFraction: $visibleFraction
-                    ) { frac in
-                        let totalLines = content.components(separatedBy: "\n").count
-                        let line = max(1, Int(frac * CGFloat(totalLines)))
-                        scrollTarget = NavigatorScrollTarget(line: line)
+                        .frame(width: geo.size.width / 4)
+                        Divider()
                     }
-                    .padding(.trailing, 2)
+                    ZStack(alignment: .trailing) {
+                        SyntaxTextView(
+                            code: content,
+                            language: language,
+                            fontSize: fontSize,
+                            searchText: searchText,
+                            scrollTarget: scrollTarget,
+                            onScrollChange: { frac, vis in
+                                scrollFraction = frac
+                                visibleFraction = vis
+                            }
+                        )
+                        .onChange(of: searchText) { _, query in
+                            updateMatchCount(in: content, query: query)
+                        }
+                        .onChange(of: viewMode) { _, _ in
+                            searchText = ""; matchCount = 0
+                        }
+                        ScrollMiniMapView(
+                            scrollFraction: $scrollFraction,
+                            visibleFraction: $visibleFraction
+                        ) { frac in
+                            let totalLines = content.components(separatedBy: "\n").count
+                            let line = max(1, Int(frac * CGFloat(totalLines)))
+                            scrollTarget = NavigatorScrollTarget(line: line)
+                        }
+                        .padding(.trailing, 2)
+                    }
                 }
             }
         }
+        .searchable(text: $searchText, prompt: "Search in file")
     }
 
-    private func plainLayout(_ content: String) -> some View {
-        SyntaxTextView(
-            code: content,
-            language: language,
-            fontSize: fontSize,
-            searchText: searchText
-        )
+    // MARK: - Text content (plain / hex / autoformat)
+
+    @ViewBuilder
+    private func textContent(_ content: String) -> some View {
+        VStack(spacing: 0) {
+            if !searchText.isEmpty { matchBar(for: content) }
+            SyntaxTextView(
+                code: content,
+                language: viewMode == .text ? language : nil,
+                fontSize: fontSize,
+                searchText: searchText
+            )
+            .onChange(of: searchText) { _, query in
+                updateMatchCount(in: content, query: query)
+            }
+            .onChange(of: viewMode) { _, _ in
+                searchText = ""; matchCount = 0
+            }
+        }
+        .searchable(text: $searchText, prompt: "Search in file")
     }
 
-    // MARK: - Match count bar
-
-    private var matchBar: some View {
+    private func matchBar(for content: String) -> some View {
         HStack {
             Text(matchCount == 0
                  ? "No matches"
@@ -145,11 +196,19 @@ struct TextViewerView: View {
             Button("Done") { dismiss() }
         }
         ToolbarItemGroup(placement: .navigationBarTrailing) {
-            if isStructured && navigatorNodes != nil {
+            if rawData != nil {
+                Button {
+                    viewMode = viewMode == .hex ? .text : .hex
+                } label: {
+                    Image(systemName: viewMode == .hex ? "doc.text" : "hexagon")
+                }
+                .disabled(viewMode == .hex && !canShowText)
+            }
+            if isStructuredTextMode {
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) { showNavigator.toggle() }
                 } label: {
-                    Image(systemName: showNavigator ? "sidebar.left" : "sidebar.left")
+                    Image(systemName: "sidebar.left")
                         .symbolVariant(showNavigator ? .fill : .none)
                 }
             }
@@ -160,13 +219,19 @@ struct TextViewerView: View {
                 Button { fontSize = min(24, fontSize + 1) } label: {
                     Label("Larger Text", systemImage: "textformat.size.larger")
                 }
-                Divider()
-                if let lang = language {
+                if let lang = language, viewMode == .text {
+                    Divider()
                     Label(lang.capitalized, systemImage: "chevron.left.forwardslash.chevron.right")
                         .foregroundStyle(.secondary)
                 }
             } label: {
                 Image(systemName: "textformat.size")
+            }
+            if isFormattable && viewMode == .text {
+                Button { isAutoformatted.toggle() } label: {
+                    Image(systemName: "wand.and.sparkles")
+                        .foregroundStyle(isAutoformatted ? Color.accentColor : Color.secondary)
+                }
             }
             Button { handleShare() } label: {
                 Image(systemName: "square.and.arrow.up")
@@ -174,32 +239,89 @@ struct TextViewerView: View {
         }
     }
 
-    // MARK: - Data loading
+    // MARK: - Autoformat
 
-    private func loadText() async {
-        isLoading = true
-        do {
-            let data = try await archive.extractEntry(entry)
-            let content: String
-            if let s = String(data: data, encoding: .utf8) {
-                content = s
-            } else if let s = String(data: data, encoding: .isoLatin1) {
-                content = s
-            } else {
-                content = hexDump(data)
-            }
-            text = content
-            let lang = TextDetector.highlightLanguage(for: entry.name)
-                    ?? TextDetector.sniffLanguage(from: content)
-            language = lang
+    private var isFormattable: Bool {
+        language == "json" || language == "xml"
+    }
 
-            if let l = lang {
-                navigatorNodes = DocumentParser.parse(content, language: l)
-            }
-        } catch {
-            loadError = error
+    private func displayText(from raw: String) -> String {
+        guard isAutoformatted else { return raw }
+        switch language {
+        case "json": return prettyJSON(raw) ?? raw
+        case "xml":  return prettyXML(raw)
+        default:     return raw
         }
-        isLoading = false
+    }
+
+    private func prettyJSON(_ raw: String) -> String? {
+        guard let data = raw.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data),
+              let formatted = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted]),
+              let result = String(data: formatted, encoding: .utf8) else { return nil }
+        return result
+    }
+
+    private func prettyXML(_ raw: String) -> String {
+        let indent = "  "
+        var result = ""
+        var depth = 0
+        var i = raw.startIndex
+
+        while i < raw.endIndex {
+            if raw[i] == "<" {
+                let afterBracket = raw.index(after: i)
+                let rest = raw[afterBracket...]
+
+                if rest.hasPrefix("!--") {
+                    if let endRange = raw.range(of: "-->", range: i..<raw.endIndex) {
+                        xmlAppend(&result, depth: depth, content: String(raw[i..<endRange.upperBound]), indent: indent)
+                        i = endRange.upperBound
+                        continue
+                    }
+                }
+
+                if rest.hasPrefix("![CDATA[") {
+                    if let endRange = raw.range(of: "]]>", range: i..<raw.endIndex) {
+                        xmlAppend(&result, depth: depth, content: String(raw[i..<endRange.upperBound]), indent: indent)
+                        i = endRange.upperBound
+                        continue
+                    }
+                }
+
+                guard let gtIndex = raw[i...].firstIndex(of: ">") else {
+                    result += String(raw[i...])
+                    break
+                }
+
+                let inner = String(raw[afterBracket..<gtIndex])
+                let tag = "<" + inner + ">"
+                let isClosing = inner.hasPrefix("/")
+                let isNonNesting = isClosing || inner.hasSuffix("/") || inner.hasPrefix("?") || inner.hasPrefix("!")
+
+                if isClosing { depth = max(0, depth - 1) }
+                xmlAppend(&result, depth: depth, content: tag, indent: indent)
+                if !isNonNesting { depth += 1 }
+
+                i = raw.index(after: gtIndex)
+            } else {
+                guard let ltIndex = raw[i...].firstIndex(of: "<") else {
+                    let text = String(raw[i...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !text.isEmpty { xmlAppend(&result, depth: depth, content: text, indent: indent) }
+                    break
+                }
+                let text = String(raw[i..<ltIndex]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !text.isEmpty { xmlAppend(&result, depth: depth, content: text, indent: indent) }
+                i = ltIndex
+            }
+        }
+
+        return result
+    }
+
+    private func xmlAppend(_ result: inout String, depth: Int, content: String, indent: String) {
+        if !result.isEmpty { result += "\n" }
+        result += String(repeating: indent, count: depth) + content
     }
 
     // MARK: - Helpers
@@ -207,37 +329,72 @@ struct TextViewerView: View {
     private func updateMatchCount(in content: String, query: String) {
         guard !query.isEmpty else { matchCount = 0; return }
         var count = 0
-        var searchRange = content.startIndex..<content.endIndex
-        while let range = content.range(of: query, options: .caseInsensitive, range: searchRange) {
-            count += 1
-            searchRange = range.upperBound..<content.endIndex
+        var range = content.startIndex..<content.endIndex
+        while let r = content.range(of: query, options: .caseInsensitive, range: range) {
+            count += 1; range = r.upperBound..<content.endIndex
         }
         matchCount = count
     }
 
-    private func handleShare() {
-        guard let text else { return }
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent(entry.displayName)
+    private func loadContent() async {
+        isLoading = true
         do {
-            try text.data(using: .utf8)?.write(to: url)
-            shareItem = url
-            showingShare = true
-        } catch {}
+            let data = try await source.load()
+            rawData = data
+            hexContent = buildHexDump(data)
+
+            if let s = String(data: data, encoding: .utf8) {
+                decodedText = s
+                language = TextDetector.highlightLanguage(for: source.fileName)
+                    ?? TextDetector.sniffLanguage(from: s)
+            } else if let s = String(data: data, encoding: .isoLatin1) {
+                decodedText = s
+                language = TextDetector.highlightLanguage(for: source.fileName)
+                    ?? TextDetector.sniffLanguage(from: s)
+            }
+
+            if decodedText == nil || TextDetector.looksLikeBinary(data) {
+                viewMode = .hex
+            }
+
+            if let lang = language, let text = decodedText {
+                navigatorNodes = DocumentParser.parse(text, language: lang)
+            }
+        } catch {
+            loadError = error.localizedDescription
+        }
+        isLoading = false
     }
 
-    private func hexDump(_ data: Data) -> String {
-        var lines: [String] = ["<Binary file – showing hex dump>", ""]
+    private func handleShare() {
+        let content = displayedContent
+        let filename = viewMode == .hex
+            ? source.displayName + ".hex.txt"
+            : source.displayName
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        try? content.data(using: .utf8)?.write(to: url)
+        shareItem = url
+        showingShare = true
+    }
+
+    private func buildHexDump(_ data: Data) -> String {
+        let limit = 65536
         let bytesPerRow = 16
-        for rowStart in stride(from: 0, to: min(data.count, 1024), by: bytesPerRow) {
-            let rowEnd = min(rowStart + bytesPerRow, data.count)
-            let row    = data[rowStart..<rowEnd]
+        let end = min(data.count, limit)
+        var lines = [String]()
+        lines.reserveCapacity(end / bytesPerRow + 2)
+        for rowStart in stride(from: 0, to: end, by: bytesPerRow) {
+            let rowEnd = min(rowStart + bytesPerRow, end)
+            let row = data[rowStart..<rowEnd]
             let offset = String(format: "%08X", rowStart)
-            let hex    = row.map { String(format: "%02X", $0) }.joined(separator: " ")
-            let ascii  = row.map { ($0 >= 0x20 && $0 < 0x7F) ? String(UnicodeScalar($0)) : "." }.joined()
+            let hex = row.map { String(format: "%02X", $0) }.joined(separator: " ")
+            let ascii = row.map { ($0 >= 0x20 && $0 < 0x7F) ? String(UnicodeScalar($0)) : "." }.joined()
             lines.append("\(offset)  \(hex.padding(toLength: 48, withPad: " ", startingAt: 0))  \(ascii)")
         }
-        if data.count > 1024 { lines.append("\n… (\(data.count - 1024) more bytes)") }
+        if data.count > limit {
+            lines.append("")
+            lines.append("… (\(data.count - limit) more bytes)")
+        }
         return lines.joined(separator: "\n")
     }
 }
