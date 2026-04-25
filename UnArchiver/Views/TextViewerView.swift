@@ -274,13 +274,13 @@ struct TextViewerView: View {
                     showWhitespace: showWhitespace,
                     showIndentLines: showIndentLines
                 )
-            }
-            .onChange(of: searchText) { _, query in
-                updateMatchCount(in: content, query: query)
-            }
-            .onChange(of: viewMode) { _, _ in
-                searchText = ""
-                matchCount = 0
+                .onChange(of: searchText) { _, query in
+                    updateMatchCount(in: content, query: query)
+                }
+                .onChange(of: viewMode) { _, _ in
+                    searchText = ""
+                    matchCount = 0
+                }
             }
         }
         .searchable(text: $searchText, prompt: "Search in file")
