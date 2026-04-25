@@ -40,7 +40,6 @@ enum TextDetector {
     private static let quickLookExtensions: Set<String> = [
         "pdf",
         "png", "jpg", "jpeg", "gif", "webp", "heic", "heif", "tiff", "tif", "bmp", "ico",
-        "md", "markdown",
     ]
 
     static func isQuickLookPreviewable(name: String) -> Bool {
