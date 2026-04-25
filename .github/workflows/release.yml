@@ -14,8 +14,7 @@ on:
         type: string
 
 permissions:
-  contents: read   # needed to read repo data for changelog
-  contents: write   # needed to push altstore-source.json and create release
+  contents: write  # needed to push altstore-source.json and create release
 
 jobs:
   release:
