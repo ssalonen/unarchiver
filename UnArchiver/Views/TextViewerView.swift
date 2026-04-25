@@ -48,6 +48,9 @@ struct TextViewerView: View {
     @State private var isAutoformatted = false
     @State private var wordWrap: Bool = true
 
+    @AppStorage("showWhitespaceIndicators") private var showWhitespace = false
+    @AppStorage("showIndentGuides") private var showIndentLines = false
+
     private var canShowText: Bool { decodedText != nil }
 
     private var displayedContent: String {
@@ -108,6 +111,15 @@ struct TextViewerView: View {
                 }
             } label: {
                 Image(systemName: "textformat.size")
+            }
+            if viewMode == .text {
+                Menu {
+                    Toggle("Whitespace Indicators", isOn: $showWhitespace)
+                    Toggle("Indent Guides", isOn: $showIndentLines)
+                } label: {
+                    Image(systemName: "paragraph")
+                        .foregroundColor(showWhitespace || showIndentLines ? .accentColor : .secondary)
+                }
             }
             if isFormattable && viewMode == .text {
                 Button { isAutoformatted.toggle() } label: {
@@ -242,6 +254,8 @@ struct TextViewerView: View {
                 language: viewMode == .text ? language : nil,
                 fontSize: fontSize,
                 searchText: searchText,
+                showWhitespace: showWhitespace,
+                showIndentLines: showIndentLines,
                 wordWrap: wordWrap
             )
             .onChange(of: searchText) { _, query in
