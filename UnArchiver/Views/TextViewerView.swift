@@ -231,17 +231,6 @@ struct TextViewerView: View {
 private func pad(_ n: Int) -> String { String(repeating: "  ", count: n) }
 }
 
-extension View {
-    @ViewBuilder
-    func applyIf<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
-        if condition {
-            transform(self)
-        } else {
-            self
-        }
-    }
-}
-
     // MARK: - Text content
 
     @ViewBuilder
@@ -260,25 +249,35 @@ extension View {
                 .padding(.vertical, 6)
                 .background(Color(.secondarySystemBackground))
             }
+            syntaxTextView(content)
+        }
+        .searchable(text: $searchText, prompt: "Search in file")
+    }
+
+    @ViewBuilder
+    private func syntaxTextView(_ content: String) -> some View {
+        if wordWrap {
             SyntaxTextView(
                 code: content,
                 language: viewMode == .text ? language : nil,
                 fontSize: fontSize,
                 searchText: searchText,
-                wordWrap: wordWrap,
+                wordWrap: true,
                 showWhitespace: showWhitespace,
                 showIndentLines: showIndentLines
             )
-            .applyIf(wordWrap) { $0.fixedSize(horizontal: false, vertical: true) }
-            .onChange(of: searchText) { _, query in
-                updateMatchCount(in: content, query: query)
-            }
-            .onChange(of: viewMode) { _, _ in
-                searchText = ""
-                matchCount = 0
-            }
+            .frame(minWidth: 0, maxWidth: .infinity)
+        } else {
+            SyntaxTextView(
+                code: content,
+                language: viewMode == .text ? language : nil,
+                fontSize: fontSize,
+                searchText: searchText,
+                wordWrap: false,
+                showWhitespace: showWhitespace,
+                showIndentLines: showIndentLines
+            )
         }
-        .searchable(text: $searchText, prompt: "Search in file")
     }
 
     // MARK: - Helpers
