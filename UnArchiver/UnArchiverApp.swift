@@ -85,6 +85,7 @@ enum SupportedTypes {
         UTType(filenameExtension: "xz")             ?? .data,
         UTType(filenameExtension: "txz")            ?? .data,
         UTType(mimeType: "application/x-xz")        ?? .data,
+        UTType(filenameExtension: "ipa")             ?? .data,
     ].uniqued()
 }
 

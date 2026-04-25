@@ -53,6 +53,7 @@ enum ArchiveType: String, CaseIterable {
     case tarXZ = "TAR+XZ"
     case xz = "XZ"
     case zip = "ZIP"
+    case ipa = "IPA"
     case unknown = "Unknown"
 
     static func detect(url: URL) -> ArchiveType {
@@ -64,6 +65,7 @@ enum ArchiveType: String, CaseIterable {
         if name.hasSuffix(".gz") { return .gzip }
         if name.hasSuffix(".xz") { return .xz }
         if name.hasSuffix(".zip") { return .zip }
+        if name.hasSuffix(".ipa") { return .ipa }
         return .unknown
     }
 }

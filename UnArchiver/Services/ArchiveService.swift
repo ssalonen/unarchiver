@@ -26,7 +26,7 @@ enum ArchiveService {
         let type = ArchiveType.detect(url: url)
 
         switch type {
-        case .zip:
+        case .zip, .ipa:
             let parsed = try ZipParser.parse(data: data)
             return parsed.map { $0.entry }
 
@@ -77,7 +77,7 @@ enum ArchiveService {
         let type = ArchiveType.detect(url: url)
 
         switch type {
-        case .zip:
+        case .zip, .ipa:
             let parsed = try ZipParser.parse(data: data)
             guard let match = parsed.first(where: { $0.entry.path == entry.path }) else {
                 throw ArchiveError.unsupportedFormat
