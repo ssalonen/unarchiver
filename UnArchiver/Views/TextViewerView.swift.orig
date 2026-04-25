@@ -254,9 +254,12 @@ struct TextViewerView: View {
                 language: viewMode == .text ? language : nil,
                 fontSize: fontSize,
                 searchText: searchText,
-                wordWrap: wordWrap,
+<<<<<<< HEAD
+                wordWrap: wordWrap
+=======
                 showWhitespace: showWhitespace,
                 showIndentLines: showIndentLines
+>>>>>>> efa128e (feat: whitespace indicator and indent guide toggle)
             )
             .onChange(of: searchText) { _, query in
                 updateMatchCount(in: content, query: query)
