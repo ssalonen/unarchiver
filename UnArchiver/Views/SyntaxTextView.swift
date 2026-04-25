@@ -8,6 +8,8 @@ struct SyntaxTextView: UIViewRepresentable {
     let fontSize: CGFloat
     let searchText: String
     let wordWrap: Bool
+    let showWhitespace: Bool
+    let showIndentLines: Bool
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -15,8 +17,8 @@ struct SyntaxTextView: UIViewRepresentable {
 
     // MARK: UIViewRepresentable
 
-    func makeUIView(context: Context) -> UITextView {
-        let tv = UITextView()
+    func makeUIView(context: Context) -> IndentGuideTextView {
+        let tv = IndentGuideTextView()
         tv.isEditable = false
         tv.isSelectable = true
         tv.isScrollEnabled = true
@@ -24,10 +26,15 @@ struct SyntaxTextView: UIViewRepresentable {
         tv.autocapitalizationType = .none
         tv.dataDetectorTypes = []
         tv.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        // Allow the text view to size itself to content width so long lines
+        // are clipped by the parent scroll view rather than wrapped.
+        tv.textContainer.lineBreakMode = .byClipping
+        tv.textContainer.widthTracksTextView = false
+        tv.textContainer.size.width = CGFloat.greatestFiniteMagnitude
         return tv
     }
 
-    func updateUIView(_ tv: UITextView, context: Context) {
+    func updateUIView(_ tv: IndentGuideTextView, context: Context) {
         context.coordinator.apply(
             to: tv,
             code: code,
@@ -35,7 +42,9 @@ struct SyntaxTextView: UIViewRepresentable {
             fontSize: fontSize,
             theme: theme,
             searchText: searchText,
-            wordWrap: wordWrap
+            wordWrap: wordWrap,
+            showWhitespace: showWhitespace,
+            showIndentLines: showIndentLines
         )
     }
 
@@ -49,15 +58,17 @@ struct SyntaxTextView: UIViewRepresentable {
         private var lastKey = ""
 
         func apply(
-            to tv: UITextView,
+            to tv: IndentGuideTextView,
             code: String,
             language: String?,
             fontSize: CGFloat,
             theme: String,
             searchText: String,
-            wordWrap: Bool
+            wordWrap: Bool,
+            showWhitespace: Bool,
+            showIndentLines: Bool
         ) {
-            let key = "\(theme)-\(fontSize)-\(code.hashValue)-\(searchText)-\(wordWrap)"
+            let key = "\(theme)-\(fontSize)-\(code.hashValue)-\(searchText)-\(wordWrap)-\(showWhitespace)-\(showIndentLines)"
             guard key != lastKey else { return }
             lastKey = key
 
@@ -74,15 +85,15 @@ struct SyntaxTextView: UIViewRepresentable {
 
             highlightr?.setTheme(to: theme)
 
-            // Build attributed string (highlighted or plain fallback)
-            let attributed = highlighted(
-                code: code,
-                language: language,
-                fontSize: fontSize,
-                theme: theme
-            )
+            let font = UIFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
+            let charWidth = (" " as NSString).size(withAttributes: [.font: font]).width
 
-            // Overlay search matches in yellow
+            var attributed = highlighted(code: code, language: language, fontSize: fontSize, theme: theme)
+
+            if showWhitespace {
+                attributed = withWhitespaceMarkers(attributed)
+            }
+
             let result: NSAttributedString
             if !searchText.isEmpty {
                 result = withHighlightedMatches(in: attributed, query: searchText)
@@ -97,11 +108,16 @@ struct SyntaxTextView: UIViewRepresentable {
             } else {
                 tv.backgroundColor = .systemBackground
             }
+
+            tv.showIndentLines = showIndentLines
+            tv.charWidth = charWidth
         }
 
         // MARK: - Private
 
-        private func highlighted(code: String, language: String?, fontSize: CGFloat, theme: String) -> NSAttributedString {
+        private func highlighted(
+            code: String, language: String?, fontSize: CGFloat, theme: String
+        ) -> NSAttributedString {
             let font = UIFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
 
             if let lang = language,
@@ -111,15 +127,34 @@ struct SyntaxTextView: UIViewRepresentable {
                                range: NSRange(location: 0, length: m.length))
                 return m
             }
+            return NSAttributedString(string: code, attributes: [.font: font, .foregroundColor: UIColor.label])
+        }
 
-            // Plain fallback
-            return NSAttributedString(
-                string: code,
-                attributes: [
-                    .font: font,
-                    .foregroundColor: UIColor.label,
-                ]
-            )
+        // Replace space/tab characters with visible glyphs (· and →) in a dim colour.
+        // One-to-one substitution preserves NSRange offsets so search highlights remain valid.
+        private func withWhitespaceMarkers(_ source: NSAttributedString) -> NSAttributedString {
+            let result = NSMutableAttributedString()
+            let dim = UIColor.tertiaryLabel
+            let fullRange = NSRange(location: 0, length: source.length)
+
+            source.enumerateAttributes(in: fullRange, options: []) { attrs, range, _ in
+                let substr = (source.string as NSString).substring(with: range)
+                let seg = NSMutableAttributedString()
+                for char in substr {
+                    switch char {
+                    case "\t":
+                        var a = attrs; a[.foregroundColor] = dim
+                        seg.append(NSAttributedString(string: "→", attributes: a))
+                    case " ":
+                        var a = attrs; a[.foregroundColor] = dim
+                        seg.append(NSAttributedString(string: "·", attributes: a))
+                    default:
+                        seg.append(NSAttributedString(string: String(char), attributes: attrs))
+                    }
+                }
+                result.append(seg)
+            }
+            return result
         }
 
         private func withHighlightedMatches(
@@ -132,11 +167,7 @@ struct SyntaxTextView: UIViewRepresentable {
             var searchRange = NSRange(location: 0, length: string.length)
 
             while searchRange.location < fullRange.length {
-                let found = string.range(
-                    of: query,
-                    options: .caseInsensitive,
-                    range: searchRange
-                )
+                let found = string.range(of: query, options: .caseInsensitive, range: searchRange)
                 guard found.location != NSNotFound else { break }
                 result.addAttribute(.backgroundColor, value: UIColor.systemYellow, range: found)
                 result.addAttribute(.foregroundColor, value: UIColor.black, range: found)
@@ -146,6 +177,72 @@ struct SyntaxTextView: UIViewRepresentable {
                 )
             }
             return result
+        }
+    }
+}
+
+// MARK: - IndentGuideTextView
+
+final class IndentGuideTextView: UITextView {
+
+    var showIndentLines = false {
+        didSet { guideOverlay.isHidden = !showIndentLines; guideOverlay.setNeedsDisplay() }
+    }
+
+    var charWidth: CGFloat = 8 {
+        didSet { guideOverlay.setNeedsDisplay() }
+    }
+
+    private lazy var guideOverlay: IndentGuideOverlay = {
+        let v = IndentGuideOverlay()
+        v.backgroundColor = .clear
+        v.isUserInteractionEnabled = false
+        v.isHidden = true
+        return v
+    }()
+
+    override init(frame: CGRect, textContainer: NSTextContainer?) {
+        super.init(frame: frame, textContainer: textContainer)
+        addSubview(guideOverlay)
+        guideOverlay.textView = self
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guideOverlay.frame = bounds
+        guideOverlay.setNeedsDisplay()
+    }
+}
+
+// MARK: - IndentGuideOverlay
+
+private final class IndentGuideOverlay: UIView {
+    weak var textView: IndentGuideTextView?
+
+    override func draw(_ rect: CGRect) {
+        guard let tv = textView, tv.showIndentLines,
+              let context = UIGraphicsGetCurrentContext() else { return }
+
+        let tabWidth = tv.charWidth * 4
+        guard tabWidth > 0 else { return }
+
+        let insetLeft = tv.textContainerInset.left + tv.textContainer.lineFragmentPadding
+        let offsetX = tv.contentOffset.x
+
+        context.setStrokeColor(UIColor.separator.withAlphaComponent(0.6).cgColor)
+        context.setLineWidth(0.5)
+
+        // Start at the first guide column; adjust for horizontal scroll
+        var x = insetLeft + tabWidth - offsetX
+        while x < rect.width + tabWidth {
+            if x >= 0 {
+                context.move(to: CGPoint(x: x, y: 0))
+                context.addLine(to: CGPoint(x: x, y: rect.height))
+                context.strokePath()
+            }
+            x += tabWidth
         }
     }
 }
