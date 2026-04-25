@@ -14,6 +14,7 @@ on:
         type: string
 
 permissions:
+  contents: read   # needed to read repo data for changelog
   contents: write   # needed to push altstore-source.json and create release
 
 jobs:
@@ -40,6 +41,36 @@ jobs:
           VERSION_NUM="${TAG#v}"
           echo "TAG=$TAG"             >> "$GITHUB_ENV"
           echo "VERSION_NUM=$VERSION_NUM" >> "$GITHUB_ENV"
+
+      - name: Find previous tag
+        run: |
+          PREV_TAG=$(git describe --abbrev=0 --tags HEAD~1 2>/dev/null || git describe --abbrev=0 --tags 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found"
+            echo "PREV_TAG=" >> $GITHUB_ENV
+          else
+            echo "PREV_TAG=$PREV_TAG" >> $GITHUB_ENV
+          fi
+
+      - name: Generate changelog
+        run: |
+          if [ -z "${{ env.PREV_TAG }}" ]; then
+            CHANGELOG="(initial release)"
+          else
+            CHANGELOG=$(gh api repos/${{ github.repository }}/compare/${{ env.PREV_TAG }}...${{ env.TAG }} \
+              --jq '.commits, .pulls | flatten | sort_by(.created_at) | reverse | .[] |
+                if .title then "• [\(.title)](\(.html_url)) ([\(.author.login)](" + .user.html_url + "))"
+                else "• [\(.commit.message | split("\n")[0])](\(.html_url)) ([\(.author.login)](" + .author.html_url + "))"
+                end' \
+              2>/dev/null || echo "")
+
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG=$(git log ${{ env.PREV_TAG }}..${{ env.TAG }} --pretty="• %s (%an)" 2>/dev/null || echo "(no changes detected)")
+            fi
+          fi
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "${CHANGELOG:-"(no changes detected)"}" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Select Xcode
         run: |
@@ -147,6 +178,12 @@ jobs:
           tag_name: ${{ env.TAG }}
           name: "UnArchiver ${{ env.VERSION_NUM }}"
           body: |
+            ## Changes since ${{ env.PREV_TAG }}
+
+            ${{ env.CHANGELOG }}
+
+            ---
+
             ## Install via SideStore / AltStore
 
             **Add this source URL in SideStore/AltStore:**
