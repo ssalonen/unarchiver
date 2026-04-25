@@ -144,7 +144,7 @@ struct SyntaxTextView: UIViewRepresentable {
                     switch char {
                     case "\t":
                         var a = attrs; a[.foregroundColor] = dim
-                        seg.append(NSAttributedString(string: "→", attributes: a))
+                        seg.append(NSAttributedString(string: " → ", attributes: a))
                     case " ":
                         var a = attrs; a[.foregroundColor] = dim
                         seg.append(NSAttributedString(string: "·", attributes: a))
