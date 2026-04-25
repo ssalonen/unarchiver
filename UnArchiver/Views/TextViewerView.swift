@@ -27,7 +27,7 @@ enum ContentSource {
     }
 }
 
-private enum ViewMode { case text, hex }
+private enum ViewMode { case text, hex, preview }
 
 struct TextViewerView: View {
     let source: ContentSource
@@ -47,6 +47,13 @@ struct TextViewerView: View {
     @State private var viewMode: ViewMode = .text
     @State private var isAutoformatted = false
     @State private var wordWrap: Bool = true
+    @State private var previewMode: PreviewMode = .source
+
+    private enum PreviewMode: String, CaseIterable {
+        case source, rendered
+    }
+
+    private var isMarkdown: Bool { language == "markdown" && viewMode == .text }
 
     @AppStorage("showWhitespaceIndicators") private var showWhitespace = false
     @AppStorage("showIndentGuides") private var showIndentLines = false
@@ -130,6 +137,12 @@ struct TextViewerView: View {
             if viewMode == .text {
                 Button { wordWrap.toggle() } label: {
                     Image(systemName: wordWrap ? "arrow.left.and.right" : "text.alignleft")
+                }
+            }
+            if isMarkdown {
+                Button { previewMode = previewMode == .source ? .rendered : .source } label: {
+                    Image(systemName: previewMode == .source ? "eye" : "doc.text")
+                        .foregroundStyle(previewMode == .rendered ? Color.accentColor : Color.secondary)
                 }
             }
             Button { handleShare() } label: {
@@ -249,22 +262,26 @@ struct TextViewerView: View {
                 .padding(.vertical, 6)
                 .background(Color(.secondarySystemBackground))
             }
-            SyntaxTextView(
-                code: content,
-                language: viewMode == .text ? language : nil,
-                fontSize: fontSize,
-                searchText: searchText,
-                wordWrap: wordWrap,
-                showWhitespace: showWhitespace,
-                showIndentLines: showIndentLines
-            )
-            .fixedSize(horizontal: false, vertical: true)
-            .onChange(of: searchText) { _, query in
-                updateMatchCount(in: content, query: query)
-            }
-            .onChange(of: viewMode) { _, _ in
-                searchText = ""
-                matchCount = 0
+if previewMode == .rendered {
+                MarkdownPreviewView(markdown: content, fontSize: fontSize)
+            } else {
+                SyntaxTextView(
+                    code: content,
+                    language: viewMode == .text ? language : nil,
+                    fontSize: fontSize,
+                    searchText: searchText,
+                    wordWrap: wordWrap,
+                    showWhitespace: showWhitespace,
+                    showIndentLines: showIndentLines
+                )
+                .fixedSize(horizontal: false, vertical: true)
+                .onChange(of: searchText) { _, query in
+                    updateMatchCount(in: content, query: query)
+                }
+                .onChange(of: viewMode) { _, _ in
+                    searchText = ""
+                    matchCount = 0
+                }
             }
         }
         .searchable(text: $searchText, prompt: "Search in file")
