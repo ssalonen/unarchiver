@@ -262,7 +262,7 @@ struct TextViewerView: View {
                 .padding(.vertical, 6)
                 .background(Color(.secondarySystemBackground))
             }
-            if previewMode == .rendered {
+if previewMode == .rendered {
                 MarkdownPreviewView(markdown: content, fontSize: fontSize)
             } else {
                 SyntaxTextView(
@@ -274,6 +274,7 @@ struct TextViewerView: View {
                     showWhitespace: showWhitespace,
                     showIndentLines: showIndentLines
                 )
+                .fixedSize(horizontal: false, vertical: true)
                 .onChange(of: searchText) { _, query in
                     updateMatchCount(in: content, query: query)
                 }
@@ -281,6 +282,7 @@ struct TextViewerView: View {
                     searchText = ""
                     matchCount = 0
                 }
+            }
             }
         }
         .searchable(text: $searchText, prompt: "Search in file")
