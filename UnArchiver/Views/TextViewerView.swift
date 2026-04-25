@@ -228,8 +228,19 @@ struct TextViewerView: View {
             if let s = String(data: data, encoding: .utf8) { pendingText += s }
         }
 
-        private func pad(_ n: Int) -> String { String(repeating: "  ", count: n) }
+private func pad(_ n: Int) -> String { String(repeating: "  ", count: n) }
+}
+
+extension View {
+    @ViewBuilder
+    func applyIf<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
     }
+}
 
     // MARK: - Text content
 
@@ -258,7 +269,7 @@ struct TextViewerView: View {
                 showWhitespace: showWhitespace,
                 showIndentLines: showIndentLines
             )
-            .fixedSize(horizontal: false, vertical: true)
+            .applyIf(wordWrap) { $0.fixedSize(horizontal: false, vertical: true) }
             .onChange(of: searchText) { _, query in
                 updateMatchCount(in: content, query: query)
             }
