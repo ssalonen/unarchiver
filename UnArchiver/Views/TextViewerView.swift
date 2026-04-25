@@ -246,7 +246,7 @@ struct TextViewerView: View {
 
     // MARK: - Text content
 
-    @ViewBuilder
+@ViewBuilder
     private func textContent(_ content: String) -> some View {
         VStack(spacing: 0) {
             if !searchText.isEmpty {
@@ -262,7 +262,7 @@ struct TextViewerView: View {
                 .padding(.vertical, 6)
                 .background(Color(.secondarySystemBackground))
             }
-if previewMode == .rendered {
+            if previewMode == .rendered {
                 MarkdownPreviewView(markdown: content, fontSize: fontSize)
             } else {
                 SyntaxTextView(
