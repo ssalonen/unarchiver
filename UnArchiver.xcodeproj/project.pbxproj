@@ -28,6 +28,7 @@
 		AA070000000000000000000C /* FileRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000C /* FileRowView.swift */; };
 		AA070000000000000000000D /* TextViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000D /* TextViewerView.swift */; };
 		AA0700000000000000000044 /* QuickLookPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000001C /* QuickLookPreviewView.swift */; };
+		AA0700000000000000000045 /* MarkdownPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000001D /* MarkdownPreviewView.swift */; };
 
 		/* App resources */
 		AA070000000000000000000E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA060000000000000000000E /* Assets.xcassets */; };
@@ -90,6 +91,7 @@
 		AA060000000000000000001A /* XZService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XZService.swift; sourceTree = "<group>"; };
 		AA060000000000000000001B /* SyntaxTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxTextView.swift; sourceTree = "<group>"; };
 		AA060000000000000000001C /* QuickLookPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookPreviewView.swift; sourceTree = "<group>"; };
+		AA060000000000000000001D /* MarkdownPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownPreviewView.swift; sourceTree = "<group>"; };
 		/* Share extension */
 		AA0600000000000000000020 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AA0600000000000000000021 /* ShareExtension-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ShareExtension-Info.plist"; path = "ShareExtension/Info.plist"; sourceTree = "<group>"; };
@@ -188,6 +190,7 @@
 
 				AA060000000000000000001B /* SyntaxTextView.swift */,
 				AA060000000000000000001C /* QuickLookPreviewView.swift */,
+				AA060000000000000000001D /* MarkdownPreviewView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -328,6 +331,7 @@
 				AA070000000000000000000C /* FileRowView.swift in Sources */,
 				AA070000000000000000000D /* TextViewerView.swift in Sources */,
 				AA0700000000000000000044 /* QuickLookPreviewView.swift in Sources */,
+				AA0700000000000000000045 /* MarkdownPreviewView.swift in Sources */,
 
 			);
 			runOnlyForDeploymentPostprocessing = 0;
