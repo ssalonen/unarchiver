@@ -258,6 +258,7 @@ struct TextViewerView: View {
                 showWhitespace: showWhitespace,
                 showIndentLines: showIndentLines
             )
+            .fixedSize(horizontal: false, vertical: true)
             .onChange(of: searchText) { _, query in
                 updateMatchCount(in: content, query: query)
             }
