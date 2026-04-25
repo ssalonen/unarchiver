@@ -25,6 +25,7 @@ struct SyntaxTextView: UIViewRepresentable {
         tv.autocorrectionType = .no
         tv.autocapitalizationType = .none
         tv.dataDetectorTypes = []
+        tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         tv.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
         // Allow the text view to size itself to content width so long lines
         // are clipped by the parent scroll view rather than wrapped.
@@ -75,11 +76,13 @@ struct SyntaxTextView: UIViewRepresentable {
             if wordWrap {
                 tv.textContainer.lineBreakMode = .byWordWrapping
                 tv.textContainer.widthTracksTextView = true
+                tv.isScrollEnabled = false
                 tv.showsHorizontalScrollIndicator = false
             } else {
                 tv.textContainer.lineBreakMode = .byClipping
                 tv.textContainer.widthTracksTextView = false
                 tv.textContainer.size.width = CGFloat.greatestFiniteMagnitude
+                tv.isScrollEnabled = true
                 tv.showsHorizontalScrollIndicator = true
             }
 
