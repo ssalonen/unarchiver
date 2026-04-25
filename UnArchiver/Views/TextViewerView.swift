@@ -140,7 +140,14 @@ struct TextViewerView: View {
                 }
             }
             if isMarkdown {
-                Button { previewMode = previewMode == .source ? .rendered : .source } label: {
+                Menu {
+                    Button { previewMode = .source } label: {
+                        Label("Source", systemImage: "doc.text")
+                    }
+                    Button { previewMode = .rendered } label: {
+                        Label("Rendered", systemImage: "eye")
+                    }
+                } label: {
                     Image(systemName: previewMode == .source ? "eye" : "doc.text")
                         .foregroundStyle(previewMode == .rendered ? Color.accentColor : Color.secondary)
                 }
@@ -246,7 +253,7 @@ struct TextViewerView: View {
 
 // MARK: - Text content
 
-    @ViewBuilder
+@ViewBuilder
     private func textContent(_ content: String) -> some View {
         VStack(spacing: 0) {
             if !searchText.isEmpty {
