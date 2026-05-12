@@ -26,13 +26,8 @@ struct SyntaxTextView: UIViewRepresentable {
         tv.autocapitalizationType = .none
         tv.dataDetectorTypes = []
         tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        tv.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         tv.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
-        // Allow the text view to size itself to content width so long lines
-        // are clipped by the parent scroll view rather than wrapped.
-        tv.textContainer.lineBreakMode = .byClipping
-        tv.textContainer.widthTracksTextView = false
-        tv.textContainer.size.width = CGFloat.greatestFiniteMagnitude
         return tv
     }
 
@@ -75,14 +70,16 @@ struct SyntaxTextView: UIViewRepresentable {
             lastKey = key
 
             if wordWrap {
-                tv.textContainer.lineBreakMode = .byWordWrapping
                 tv.textContainer.widthTracksTextView = true
+                tv.textContainer.lineBreakMode = .byWordWrapping
                 tv.showsHorizontalScrollIndicator = false
             } else {
-                tv.textContainer.lineBreakMode = .byClipping
                 tv.textContainer.widthTracksTextView = false
-                tv.textContainer.size.width = CGFloat.greatestFiniteMagnitude
-                tv.isScrollEnabled = true
+                tv.textContainer.size = CGSize(
+                    width: CGFloat.greatestFiniteMagnitude,
+                    height: CGFloat.greatestFiniteMagnitude
+                )
+                tv.textContainer.lineBreakMode = .byClipping
                 tv.showsHorizontalScrollIndicator = true
             }
 
@@ -214,6 +211,14 @@ final class IndentGuideTextView: UITextView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        // Restore infinite container width after UITextView's own layout pass,
+        // which can silently reset the size when bounds change.
+        if !textContainer.widthTracksTextView {
+            textContainer.size = CGSize(
+                width: CGFloat.greatestFiniteMagnitude,
+                height: CGFloat.greatestFiniteMagnitude
+            )
+        }
         guideOverlay.frame = bounds
         guideOverlay.setNeedsDisplay()
     }

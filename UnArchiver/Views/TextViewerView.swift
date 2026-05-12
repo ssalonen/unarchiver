@@ -280,28 +280,16 @@ struct TextViewerView: View {
 
     @ViewBuilder
     private func syntaxTextView(_ content: String) -> some View {
-        if wordWrap {
-            SyntaxTextView(
-                code: content,
-                language: viewMode == .text ? language : nil,
-                fontSize: fontSize,
-                searchText: searchText,
-                wordWrap: true,
-                showWhitespace: showWhitespace,
-                showIndentLines: showIndentLines
-            )
-            .frame(minWidth: 0, maxWidth: .infinity)
-        } else {
-            SyntaxTextView(
-                code: content,
-                language: viewMode == .text ? language : nil,
-                fontSize: fontSize,
-                searchText: searchText,
-                wordWrap: false,
-                showWhitespace: showWhitespace,
-                showIndentLines: showIndentLines
-            )
-        }
+        SyntaxTextView(
+            code: content,
+            language: viewMode == .text ? language : nil,
+            fontSize: fontSize,
+            searchText: searchText,
+            wordWrap: wordWrap,
+            showWhitespace: showWhitespace,
+            showIndentLines: showIndentLines
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Helpers
