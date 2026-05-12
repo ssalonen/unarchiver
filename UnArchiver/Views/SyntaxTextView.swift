@@ -77,7 +77,6 @@ struct SyntaxTextView: UIViewRepresentable {
             if wordWrap {
                 tv.textContainer.lineBreakMode = .byWordWrapping
                 tv.textContainer.widthTracksTextView = true
-                tv.isScrollEnabled = false
                 tv.showsHorizontalScrollIndicator = false
             } else {
                 tv.textContainer.lineBreakMode = .byClipping
