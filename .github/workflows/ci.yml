@@ -57,3 +57,36 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             2>&1 | xcbeautify --renderer github-actions
+
+      - name: Pick simulator
+        run: |
+          SIM_UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          phones = [
+              v for devs in data['devices'].values()
+              for v in devs
+              if 'iPhone' in v.get('name', '') and v.get('isAvailable', False)
+          ]
+          phones.sort(key=lambda x: x['name'])
+          print(phones[-1]['udid'] if phones else '')
+          ")
+          if [ -z "$SIM_UDID" ]; then
+            echo "No available iPhone simulator found" >&2; exit 1
+          fi
+          echo "SIM_UDID=$SIM_UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
+
+      - name: Run UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project UnArchiver.xcodeproj \
+            -scheme UnArchiver \
+            -destination "id=$SIM_UDID" \
+            -configuration Debug \
+            -clonedSourcePackagesDirPath SourcePackages \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            2>&1 | xcbeautify --renderer github-actions

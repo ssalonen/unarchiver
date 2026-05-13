@@ -28,6 +28,7 @@ struct SyntaxTextView: UIViewRepresentable {
         tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         tv.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         tv.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        tv.accessibilityIdentifier = "codeTextView"
         return tv
     }
 

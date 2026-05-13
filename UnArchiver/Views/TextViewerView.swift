@@ -103,6 +103,7 @@ struct TextViewerView: View {
                     Image(systemName: viewMode == .hex ? "doc.text" : "hexagon")
                 }
                 .disabled(viewMode == .hex && !canShowText)
+                .accessibilityIdentifier("hexToggleButton")
             }
             Menu {
                 Button { fontSize = max(10, fontSize - 1) } label: {
@@ -119,6 +120,7 @@ struct TextViewerView: View {
             } label: {
                 Image(systemName: "textformat.size")
             }
+            .accessibilityIdentifier("fontSizeMenuButton")
             if viewMode == .text {
                 Menu {
                     Toggle("Whitespace Indicators", isOn: $showWhitespace)
@@ -127,17 +129,20 @@ struct TextViewerView: View {
                     Image(systemName: "paragraph")
                         .foregroundColor(showWhitespace || showIndentLines ? .accentColor : .secondary)
                 }
+                .accessibilityIdentifier("paragraphMenuButton")
             }
             if isFormattable && viewMode == .text {
                 Button { isAutoformatted.toggle() } label: {
                     Image(systemName: "wand.and.sparkles")
                         .foregroundStyle(isAutoformatted ? Color.accentColor : Color.secondary)
                 }
+                .accessibilityIdentifier("autoformatButton")
             }
             if viewMode == .text {
                 Button { wordWrap.toggle() } label: {
                     Image(systemName: wordWrap ? "arrow.left.and.right" : "text.alignleft")
                 }
+                .accessibilityIdentifier("wordWrapButton")
             }
             if isMarkdown {
                 Menu {
@@ -151,10 +156,12 @@ struct TextViewerView: View {
                     Image(systemName: previewMode == .source ? "eye" : "doc.text")
                         .foregroundStyle(previewMode == .rendered ? Color.accentColor : Color.secondary)
                 }
+                .accessibilityIdentifier("previewModeMenuButton")
             }
             Button { handleShare() } label: {
                 Image(systemName: "square.and.arrow.up")
             }
+            .accessibilityIdentifier("shareButton")
         }
     }
 

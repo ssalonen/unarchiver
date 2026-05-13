@@ -5,18 +5,92 @@ import UniformTypeIdentifiers
 struct UnArchiverApp: App {
     @StateObject private var appState = AppState()
 
+    private static let uitestArgs: Set<String> = [
+        "--uitesting", "--uitesting-json", "--uitesting-xml", "--uitesting-markdown"
+    ]
+    private var isUITesting: Bool {
+        !ProcessInfo.processInfo.arguments.filter { Self.uitestArgs.contains($0) }.isEmpty
+    }
+
     var body: some Scene {
         WindowGroup {
-            ContentView(
-                currentArchive: $appState.currentArchive,
-                currentPlainFile: $appState.currentPlainFile,
-                openFile: appState.open
-            )
+            if isUITesting {
+                UITestRootView()
+            } else {
+                ContentView(
+                    currentArchive: $appState.currentArchive,
+                    currentPlainFile: $appState.currentPlainFile,
+                    openFile: appState.open
+                )
                 .onOpenURL { url in
                     appState.open(url: url)
                 }
+            }
         }
     }
+}
+
+// Shown only when launched with --uitesting* flags by the UI test runner.
+private struct UITestRootView: View {
+    private let source: ContentSource = {
+        let args = ProcessInfo.processInfo.arguments
+        let (text, ext) = testContent(for: args)
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("uitest.\(ext)")
+        try? text.data(using: .utf8)?.write(to: url)
+        return .file(url)
+    }()
+
+    var body: some View {
+        NavigationStack {
+            TextViewerView(source: source)
+        }
+    }
+
+    private static func testContent(for args: [String]) -> (String, String) {
+        if args.contains("--uitesting-json") { return (jsonContent, "json") }
+        if args.contains("--uitesting-xml")  { return (xmlContent,  "xml")  }
+        if args.contains("--uitesting-markdown") { return (markdownContent, "md") }
+        return (plainContent, "txt")
+    }
+
+    // 150 lines × 500 chars — forces both vertical and horizontal scrolling
+    private static let plainContent: String = (1...150).map { i in
+        String(format: "Line %03d: ", i) + String(repeating: "ABCDEFGHIJ", count: 50)
+    }.joined(separator: "\n")
+
+    private static let jsonContent = #"""
+    {"users":[{"id":1,"name":"Alice","email":"alice@example.com","roles":["admin","user"]},{"id":2,"name":"Bob","email":"bob@example.com","roles":["user"]},{"id":3,"name":"Carol","email":"carol@example.com","roles":["moderator"]}],"total":3,"page":1,"pageSize":20}
+    """#
+
+    private static let xmlContent = #"""
+    <?xml version="1.0"?><catalog><book id="1"><title>Swift Programming</title><author>Apple Inc</author><price>49.99</price><tags><tag>swift</tag><tag>ios</tag></tags></book><book id="2"><title>iOS Development</title><author>Apple Inc</author><price>39.99</price><tags><tag>ios</tag><tag>xcode</tag></tags></book></catalog>
+    """#
+
+    private static let markdownContent = """
+    # Test Document
+
+    ## Introduction
+
+    This is a **test document** with *italic* and `code` formatting.
+
+    ## Code Example
+
+    ```swift
+    let greeting = "Hello, World!"
+    print(greeting)
+    ```
+
+    ## List
+
+    - Item One
+    - Item Two
+    - Item Three
+
+    ## Conclusion
+
+    End of document.
+    """
 }
 
 /// Holds top-level app state and handles URL-based file opening
