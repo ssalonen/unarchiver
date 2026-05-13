@@ -62,15 +62,10 @@ class TextViewerTestBase: XCTestCase {
 
     // MARK: Convenience element accessors
 
-    var codeTextView: XCUIElement { app.codeTextView }
-
-    var wordWrapButton: XCUIElement      { app.buttons["wordWrapButton"] }
-    var hexToggleButton: XCUIElement     { app.buttons["hexToggleButton"] }
-    var fontSizeMenuButton: XCUIElement  { app.buttons["fontSizeMenuButton"] }
-    var paragraphMenuButton: XCUIElement { app.buttons["paragraphMenuButton"] }
-    var autoformatButton: XCUIElement    { app.buttons["autoformatButton"] }
-    var shareButton: XCUIElement         { app.buttons["shareButton"] }
-    var previewModeMenuButton: XCUIElement { app.buttons["previewModeMenuButton"] }
+    var codeTextView: XCUIElement    { app.codeTextView }
+    var wordWrapButton: XCUIElement  { app.buttons["wordWrapButton"] }
+    var hexToggleButton: XCUIElement { app.buttons["hexToggleButton"] }
+    var fontSizeMenuButton: XCUIElement { app.buttons["fontSizeMenuButton"] }
 }
 
 // MARK: - Loading
@@ -94,7 +89,9 @@ final class TextViewerLoadingTests: TextViewerTestBase {
     }
 
     func testShareButtonIsPresent() {
-        XCTAssertTrue(shareButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        XCTAssertTrue(app.buttons["Share"].waitForExistence(timeout: 3))
     }
 }
 
@@ -103,7 +100,6 @@ final class TextViewerLoadingTests: TextViewerTestBase {
 final class TextViewerWordWrapTests: TextViewerTestBase {
 
     func testWordWrapDefaultIsOn() {
-        // Paragraph menu must be present when word-wrap is on (text mode)
         XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
     }
 
@@ -195,10 +191,12 @@ final class TextViewerHexTests: TextViewerTestBase {
         XCTAssertFalse(wordWrapButton.exists)
     }
 
-    func testParagraphMenuHiddenInHexMode() {
+    func testDisplayOptionsHiddenInHexMode() {
         XCTAssertTrue(hexToggleButton.waitForExistence(timeout: 5))
         hexToggleButton.tap()
-        XCTAssertFalse(paragraphMenuButton.exists)
+        // Whitespace/indent options only appear in text mode
+        fontSizeMenuButton.tap()
+        XCTAssertFalse(app.switches["Whitespace Indicators"].waitForExistence(timeout: 2))
     }
 
     func testReturnFromHexToText() {
@@ -227,7 +225,6 @@ final class TextViewerFontSizeTests: TextViewerTestBase {
     func testFontSizeMenuOpens() {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        // At least one menu item should appear
         let larger = app.buttons["Larger Text"]
         let smaller = app.buttons["Smaller Text"]
         XCTAssertTrue(
@@ -306,7 +303,6 @@ final class TextViewerSearchTests: TextViewerTestBase {
         }
         field.tap()
         field.typeText("ABCDEFGHIJ")
-        // Match count label contains "match"
         let pred = NSPredicate(format: "label CONTAINS[c] 'match'")
         let matchLabel = app.staticTexts.matching(pred).firstMatch
         XCTAssertTrue(matchLabel.waitForExistence(timeout: 5),
@@ -337,45 +333,48 @@ final class TextViewerSearchTests: TextViewerTestBase {
 
 final class TextViewerDisplayOptionsTests: TextViewerTestBase {
 
-    func testParagraphMenuExists() {
-        XCTAssertTrue(paragraphMenuButton.waitForExistence(timeout: 5))
+    func testDisplayOptionsMenuExists() {
+        // Display options are consolidated inside the font size menu
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        XCTAssertTrue(app.switches["Whitespace Indicators"].waitForExistence(timeout: 3))
     }
 
     func testWhitespaceToggle() {
-        XCTAssertTrue(paragraphMenuButton.waitForExistence(timeout: 5))
-        paragraphMenuButton.tap()
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
         let toggle = app.switches["Whitespace Indicators"]
         if toggle.waitForExistence(timeout: 3) { toggle.tap() }
         XCTAssertTrue(codeTextView.exists)
     }
 
     func testIndentGuidesToggle() {
-        XCTAssertTrue(paragraphMenuButton.waitForExistence(timeout: 5))
-        paragraphMenuButton.tap()
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
         let toggle = app.switches["Indent Guides"]
         if toggle.waitForExistence(timeout: 3) { toggle.tap() }
         XCTAssertTrue(codeTextView.exists)
     }
 
     func testBothDisplayOptionsToggle() {
-        XCTAssertTrue(paragraphMenuButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         // Enable whitespace
-        paragraphMenuButton.tap()
+        fontSizeMenuButton.tap()
         if app.switches["Whitespace Indicators"].waitForExistence(timeout: 3) {
             app.switches["Whitespace Indicators"].tap()
         }
         // Enable indent guides
-        paragraphMenuButton.tap()
+        fontSizeMenuButton.tap()
         if app.switches["Indent Guides"].waitForExistence(timeout: 3) {
             app.switches["Indent Guides"].tap()
         }
         XCTAssertTrue(codeTextView.exists)
         // Disable both
-        paragraphMenuButton.tap()
+        fontSizeMenuButton.tap()
         if app.switches["Whitespace Indicators"].waitForExistence(timeout: 3) {
             app.switches["Whitespace Indicators"].tap()
         }
-        paragraphMenuButton.tap()
+        fontSizeMenuButton.tap()
         if app.switches["Indent Guides"].waitForExistence(timeout: 3) {
             app.switches["Indent Guides"].tap()
         }
@@ -398,28 +397,40 @@ final class TextViewerJSONTests: XCTestCase {
     override func tearDownWithError() throws { app = nil }
 
     private var codeTextView: XCUIElement { app.codeTextView }
+    private var fontSizeMenuButton: XCUIElement { app.buttons["fontSizeMenuButton"] }
 
     func testJSONLoads() {
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
     }
 
     func testAutoformatButtonVisibleForJSON() {
-        XCTAssertTrue(app.buttons["autoformatButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        XCTAssertTrue(app.buttons["Autoformat"].waitForExistence(timeout: 3))
     }
 
     func testAutoformatJSONDoesNotCrash() {
-        let btn = app.buttons["autoformatButton"]
-        XCTAssertTrue(btn.waitForExistence(timeout: 5))
-        btn.tap() // enable
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        guard app.buttons["Autoformat"].waitForExistence(timeout: 3) else {
+            XCTFail("Autoformat button not found in menu")
+            return
+        }
+        app.buttons["Autoformat"].tap() // enable
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
-        btn.tap() // disable
+        fontSizeMenuButton.tap()
+        if app.buttons["Autoformat"].waitForExistence(timeout: 3) {
+            app.buttons["Autoformat"].tap() // disable
+        }
         XCTAssertTrue(codeTextView.exists)
     }
 
     func testScrollAfterAutoformat() {
-        let btn = app.buttons["autoformatButton"]
-        XCTAssertTrue(btn.waitForExistence(timeout: 5))
-        btn.tap()
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        if app.buttons["Autoformat"].waitForExistence(timeout: 3) {
+            app.buttons["Autoformat"].tap()
+        }
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
         codeTextView.swipeUp()
         codeTextView.swipeDown()
@@ -442,21 +453,31 @@ final class TextViewerXMLTests: XCTestCase {
     override func tearDownWithError() throws { app = nil }
 
     private var codeTextView: XCUIElement { app.codeTextView }
+    private var fontSizeMenuButton: XCUIElement { app.buttons["fontSizeMenuButton"] }
 
     func testXMLLoads() {
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
     }
 
     func testAutoformatButtonVisibleForXML() {
-        XCTAssertTrue(app.buttons["autoformatButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        XCTAssertTrue(app.buttons["Autoformat"].waitForExistence(timeout: 3))
     }
 
     func testAutoformatXMLDoesNotCrash() {
-        let btn = app.buttons["autoformatButton"]
-        XCTAssertTrue(btn.waitForExistence(timeout: 5))
-        btn.tap()
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        guard app.buttons["Autoformat"].waitForExistence(timeout: 3) else {
+            XCTFail("Autoformat button not found in menu")
+            return
+        }
+        app.buttons["Autoformat"].tap()
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
-        btn.tap()
+        fontSizeMenuButton.tap()
+        if app.buttons["Autoformat"].waitForExistence(timeout: 3) {
+            app.buttons["Autoformat"].tap()
+        }
         XCTAssertTrue(codeTextView.exists)
     }
 }
@@ -476,19 +497,22 @@ final class TextViewerMarkdownTests: XCTestCase {
     override func tearDownWithError() throws { app = nil }
 
     private var codeTextView: XCUIElement { app.codeTextView }
+    private var fontSizeMenuButton: XCUIElement { app.buttons["fontSizeMenuButton"] }
 
     func testMarkdownLoads() {
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
     }
 
     func testPreviewModeMenuExists() {
-        XCTAssertTrue(app.buttons["previewModeMenuButton"].waitForExistence(timeout: 5))
+        // Preview mode options are inside the font size menu
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        XCTAssertTrue(app.buttons["Rendered"].waitForExistence(timeout: 3))
     }
 
     func testSwitchToRenderedMode() {
-        let menuBtn = app.buttons["previewModeMenuButton"]
-        XCTAssertTrue(menuBtn.waitForExistence(timeout: 5))
-        menuBtn.tap()
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
         if app.buttons["Rendered"].waitForExistence(timeout: 3) {
             app.buttons["Rendered"].tap()
         }
@@ -496,22 +520,22 @@ final class TextViewerMarkdownTests: XCTestCase {
     }
 
     func testSwitchRenderedThenBackToSource() {
-        let menuBtn = app.buttons["previewModeMenuButton"]
-        XCTAssertTrue(menuBtn.waitForExistence(timeout: 5))
-
-        menuBtn.tap()
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
         if app.buttons["Rendered"].waitForExistence(timeout: 3) { app.buttons["Rendered"].tap() }
 
-        menuBtn.tap()
+        fontSizeMenuButton.tap()
         if app.buttons["Source"].waitForExistence(timeout: 3) { app.buttons["Source"].tap() }
 
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
     }
 
     func testAutoformatButtonNotVisibleForMarkdown() {
-        // Markdown is not JSON/XML so autoformat should be hidden
+        // Markdown is not JSON/XML so autoformat should be absent from the menu
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
-        XCTAssertFalse(app.buttons["autoformatButton"].exists)
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        XCTAssertFalse(app.buttons["Autoformat"].waitForExistence(timeout: 2))
     }
 }
 
