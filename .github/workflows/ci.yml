@@ -66,20 +66,20 @@ jobs:
           phones = [
               v for devs in data['devices'].values()
               for v in devs
-              if 'iPhone 16 Pro' == v.get('name', '') and v.get('isAvailable', False)
+              if 'iPhone 17 Pro' == v.get('name', '') and v.get('isAvailable', False)
           ]
           if not phones:
-              # Fallback: any iPhone 16 variant
+              # Fallback: any iPhone 17 variant
               phones = [
                   v for devs in data['devices'].values()
                   for v in devs
-                  if 'iPhone 16' in v.get('name', '') and v.get('isAvailable', False)
+                  if 'iPhone 17' in v.get('name', '') and v.get('isAvailable', False)
               ]
           phones.sort(key=lambda x: x['name'])
           print(phones[-1]['udid'] if phones else '')
           ")
           if [ -z "$SIM_UDID" ]; then
-            echo "No available iPhone 16 simulator found" >&2; exit 1
+            echo "No available iPhone 17 simulator found" >&2; exit 1
           fi
           echo "SIM_UDID=$SIM_UDID" >> "$GITHUB_ENV"
           xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
