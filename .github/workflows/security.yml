@@ -136,8 +136,9 @@ jobs:
           import sys, re
 
           EXPECTED = {
-              "SWCompression": "https://github.com/tsolomko/SWCompression",
-              "Highlightr":    "https://github.com/raspu/Highlightr",
+              "SWCompression":          "https://github.com/tsolomko/SWCompression",
+              "Highlightr":             "https://github.com/raspu/Highlightr",
+              "swift-snapshot-testing": "https://github.com/pointfreeco/swift-snapshot-testing",
           }
 
           with open("UnArchiver.xcodeproj/project.pbxproj") as f:

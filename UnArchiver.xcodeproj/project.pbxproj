@@ -39,6 +39,9 @@
 		AA0700000000000000000020 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0600000000000000000020 /* ShareViewController.swift */; };
 		/* Embed extension */
 		AA0700000000000000000030 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA0100000000000000000002 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AB0700000000000000000001 /* UnArchiverUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0600000000000000000001 /* UnArchiverUITests.swift */; };
+		/* SnapshotTesting package product linked to UITest target */
+		AB0700000000000000000002 /* SnapshotTesting in Frameworks */ = {isa = PBXBuildFile; productRef = AB0900000000000000000002 /* SnapshotTesting */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -48,6 +51,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = AA0200000000000000000002;
 			remoteInfo = ShareExtension;
+		};
+		AB0800000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0200000000000000000001;
+			remoteInfo = UnArchiver;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -95,6 +105,8 @@
 		/* Share extension */
 		AA0600000000000000000020 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AA0600000000000000000021 /* ShareExtension-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ShareExtension-Info.plist"; path = "ShareExtension/Info.plist"; sourceTree = "<group>"; };
+		AB0100000000000000000001 /* UnArchiverUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UnArchiverUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB0600000000000000000001 /* UnArchiverUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnArchiverUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,6 +128,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AB0500000000000000000002 /* Frameworks (UITest) */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB0700000000000000000002 /* SnapshotTesting in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -124,6 +144,7 @@
 			children = (
 				AA0000000000000000000004 /* UnArchiver */,
 				AA0000000000000000000005 /* ShareExtension */,
+				AB0000000000000000000001 /* UnArchiverUITests */,
 				AA0000000000000000000006 /* Frameworks */,
 				AA0000000000000000000003 /* Products */,
 			);
@@ -134,6 +155,7 @@
 			children = (
 				AA0100000000000000000001 /* UnArchiver.app */,
 				AA0100000000000000000002 /* ShareExtension.appex */,
+				AB0100000000000000000001 /* UnArchiverUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -208,6 +230,14 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		AB0000000000000000000001 /* UnArchiverUITests */ = {
+			isa = PBXGroup;
+			children = (
+				AB0600000000000000000001 /* UnArchiverUITests.swift */,
+			);
+			path = UnArchiverUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -251,6 +281,26 @@
 			productReference = AA0100000000000000000002 /* ShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		AB0200000000000000000001 /* UnArchiverUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB0400000000000000000001 /* Build configuration list for PBXNativeTarget "UnArchiverUITests" */;
+			buildPhases = (
+				AB0500000000000000000001 /* Sources (UITest) */,
+				AB0500000000000000000002 /* Frameworks (UITest) */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AB0800000000000000000002 /* PBXTargetDependency */,
+			);
+			name = UnArchiverUITests;
+			packageProductDependencies = (
+				AB0900000000000000000002 /* SnapshotTesting */,
+			);
+			productName = UnArchiverUITests;
+			productReference = AB0100000000000000000001 /* UnArchiverUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -267,6 +317,10 @@
 					AA0200000000000000000002 = {
 						CreatedOnToolsVersion = 15.0;
 					};
+					AB0200000000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = AA0200000000000000000001;
+					};
 				};
 			};
 			buildConfigurationList = AA0400000000000000000001 /* Build configuration list for PBXProject "UnArchiver" */;
@@ -281,6 +335,7 @@
 			packageReferences = (
 				AA0900000000000000000001 /* XCRemoteSwiftPackageReference "SWCompression" */,
 				AA0900000000000000000003 /* XCRemoteSwiftPackageReference "Highlightr" */,
+				AB0900000000000000000001 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
 			);
 			productRefGroup = AA0000000000000000000003 /* Products */;
 			projectDirPath = "";
@@ -288,6 +343,7 @@
 			targets = (
 				AA0200000000000000000001 /* UnArchiver */,
 				AA0200000000000000000002 /* ShareExtension */,
+				AB0200000000000000000001 /* UnArchiverUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -344,6 +400,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AB0500000000000000000001 /* Sources (UITest) */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB0700000000000000000001 /* UnArchiverUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -351,6 +415,11 @@
 			isa = PBXTargetDependency;
 			target = AA0200000000000000000002 /* ShareExtension */;
 			targetProxy = AA0800000000000000000001 /* PBXContainerItemProxy */;
+		};
+		AB0800000000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0200000000000000000001 /* UnArchiver */;
+			targetProxy = AB0800000000000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -569,6 +638,35 @@
 			};
 			name = Release;
 		};
+		/* UITest target */
+		AB0300000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourcompany.unarchiver.uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = UnArchiver;
+			};
+			name = Debug;
+		};
+		AB0300000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourcompany.unarchiver.uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = UnArchiver;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -599,9 +697,26 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		AB0400000000000000000001 /* Build configuration list for PBXNativeTarget "UnArchiverUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0300000000000000000001 /* Debug */,
+				AB0300000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		AB0900000000000000000001 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-snapshot-testing";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.19.2;
+			};
+		};
 		AA0900000000000000000001 /* XCRemoteSwiftPackageReference "SWCompression" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/tsolomko/SWCompression";
@@ -621,6 +736,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		AB0900000000000000000002 /* SnapshotTesting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AB0900000000000000000001 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */;
+			productName = SnapshotTesting;
+		};
 		AA0900000000000000000002 /* SWCompression */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = AA0900000000000000000001 /* XCRemoteSwiftPackageReference "SWCompression" */;

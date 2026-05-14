@@ -96,6 +96,12 @@ struct TextViewerView: View {
             Button("Done") { dismiss() }
         }
         ToolbarItemGroup(placement: .navigationBarTrailing) {
+            if viewMode == .text {
+                Button { wordWrap.toggle() } label: {
+                    Image(systemName: wordWrap ? "arrow.left.and.right" : "text.alignleft")
+                }
+                .accessibilityIdentifier("wordWrapButton")
+            }
             if rawData != nil {
                 Button {
                     viewMode = viewMode == .hex ? .text : .hex
@@ -103,6 +109,7 @@ struct TextViewerView: View {
                     Image(systemName: viewMode == .hex ? "doc.text" : "hexagon")
                 }
                 .disabled(viewMode == .hex && !canShowText)
+                .accessibilityIdentifier("hexToggleButton")
             }
             Menu {
                 Button { fontSize = max(10, fontSize - 1) } label: {
@@ -116,45 +123,34 @@ struct TextViewerView: View {
                     Label(lang.capitalized, systemImage: "chevron.left.forwardslash.chevron.right")
                         .foregroundStyle(.secondary)
                 }
-            } label: {
-                Image(systemName: "textformat.size")
-            }
-            if viewMode == .text {
-                Menu {
+                if viewMode == .text {
+                    Divider()
                     Toggle("Whitespace Indicators", isOn: $showWhitespace)
                     Toggle("Indent Guides", isOn: $showIndentLines)
-                } label: {
-                    Image(systemName: "paragraph")
-                        .foregroundColor(showWhitespace || showIndentLines ? .accentColor : .secondary)
                 }
-            }
-            if isFormattable && viewMode == .text {
-                Button { isAutoformatted.toggle() } label: {
-                    Image(systemName: "wand.and.sparkles")
-                        .foregroundStyle(isAutoformatted ? Color.accentColor : Color.secondary)
+                if isFormattable && viewMode == .text {
+                    Divider()
+                    Button { isAutoformatted.toggle() } label: {
+                        Label("Autoformat", systemImage: "wand.and.sparkles")
+                    }
                 }
-            }
-            if viewMode == .text {
-                Button { wordWrap.toggle() } label: {
-                    Image(systemName: wordWrap ? "arrow.left.and.right" : "text.alignleft")
-                }
-            }
-            if isMarkdown {
-                Menu {
+                if isMarkdown {
+                    Divider()
                     Button { previewMode = .source } label: {
                         Label("Source", systemImage: "doc.text")
                     }
                     Button { previewMode = .rendered } label: {
                         Label("Rendered", systemImage: "eye")
                     }
-                } label: {
-                    Image(systemName: previewMode == .source ? "eye" : "doc.text")
-                        .foregroundStyle(previewMode == .rendered ? Color.accentColor : Color.secondary)
                 }
+                Divider()
+                Button { handleShare() } label: {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+            } label: {
+                Image(systemName: "textformat.size")
             }
-            Button { handleShare() } label: {
-                Image(systemName: "square.and.arrow.up")
-            }
+            .accessibilityIdentifier("fontSizeMenuButton")
         }
     }
 
@@ -280,28 +276,16 @@ struct TextViewerView: View {
 
     @ViewBuilder
     private func syntaxTextView(_ content: String) -> some View {
-        if wordWrap {
-            SyntaxTextView(
-                code: content,
-                language: viewMode == .text ? language : nil,
-                fontSize: fontSize,
-                searchText: searchText,
-                wordWrap: true,
-                showWhitespace: showWhitespace,
-                showIndentLines: showIndentLines
-            )
-            .frame(minWidth: 0, maxWidth: .infinity)
-        } else {
-            SyntaxTextView(
-                code: content,
-                language: viewMode == .text ? language : nil,
-                fontSize: fontSize,
-                searchText: searchText,
-                wordWrap: false,
-                showWhitespace: showWhitespace,
-                showIndentLines: showIndentLines
-            )
-        }
+        SyntaxTextView(
+            code: content,
+            language: viewMode == .text ? language : nil,
+            fontSize: fontSize,
+            searchText: searchText,
+            wordWrap: wordWrap,
+            showWhitespace: showWhitespace,
+            showIndentLines: showIndentLines
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Helpers
