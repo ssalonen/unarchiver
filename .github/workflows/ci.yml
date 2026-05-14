@@ -105,15 +105,27 @@ jobs:
       - name: Export code coverage
         if: always()
         run: |
-          XCRESULT=$(find ~/Library/Developer/Xcode/DerivedData -name "*.xcresult" | sort -t_ -k2 | tail -1)
-          if [ -n "$XCRESULT" ]; then
-            xcrun xccov view --report --json "$XCRESULT" > coverage.json
-            python3 - <<'PYEOF'
+          XCRESULT=$(find ~/Library/Developer/Xcode/DerivedData -name "*.xcresult" -maxdepth 6 | sort | tail -1)
+          if [ -z "$XCRESULT" ]; then
+            echo "No .xcresult found — skipping coverage export"
+            exit 0
+          fi
+          echo "Using result bundle: $XCRESULT"
+          xcrun xccov view --report --json "$XCRESULT" > coverage.json 2>&1 || {
+            echo "xccov failed — skipping coverage summary"
+            exit 0
+          }
+          python3 - <<'PYEOF'
           import json, sys
           with open("coverage.json") as f:
               data = json.load(f)
           targets = data.get("targets", [])
-          app = next((t for t in targets if t.get("name","").startswith("UnArchiver") and not t.get("name","").startswith("UnArchiverUITests")), None)
+          app = next(
+              (t for t in targets
+               if t.get("name","").startswith("UnArchiver")
+               and not t.get("name","").startswith("UnArchiverUITests")),
+              None
+          )
           if app:
               pct = app.get("lineCoverage", 0) * 100
               print(f"App line coverage: {pct:.1f}%")
@@ -124,9 +136,6 @@ jobs:
           else:
               print("App target not found in coverage report")
           PYEOF
-          else
-            echo "No .xcresult found — skipping coverage export"
-          fi
 
       - name: Upload coverage report
         if: always()
