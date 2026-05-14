@@ -66,6 +66,14 @@ class TextViewerTestBase: XCTestCase {
     var wordWrapButton: XCUIElement  { app.buttons["wordWrapButton"] }
     var hexToggleButton: XCUIElement { app.buttons["hexToggleButton"] }
     var fontSizeMenuButton: XCUIElement { app.buttons["fontSizeMenuButton"] }
+
+    /// Finds a menu item by label regardless of element type (Toggle items in mixed
+    /// menus render as buttons/menu-items rather than switches).
+    func menuItem(label: String) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", label))
+            .firstMatch
+    }
 }
 
 // MARK: - Loading
@@ -196,7 +204,7 @@ final class TextViewerHexTests: TextViewerTestBase {
         hexToggleButton.tap()
         // Whitespace/indent options only appear in text mode
         fontSizeMenuButton.tap()
-        XCTAssertFalse(app.switches["Whitespace Indicators"].waitForExistence(timeout: 2))
+        XCTAssertFalse(menuItem(label: "Whitespace Indicators").waitForExistence(timeout: 2))
     }
 
     func testReturnFromHexToText() {
@@ -337,13 +345,13 @@ final class TextViewerDisplayOptionsTests: TextViewerTestBase {
         // Display options are consolidated inside the font size menu
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        XCTAssertTrue(app.switches["Whitespace Indicators"].waitForExistence(timeout: 3))
+        XCTAssertTrue(menuItem(label: "Whitespace Indicators").waitForExistence(timeout: 3))
     }
 
     func testWhitespaceToggle() {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        let toggle = app.switches["Whitespace Indicators"]
+        let toggle = menuItem(label: "Whitespace Indicators")
         if toggle.waitForExistence(timeout: 3) { toggle.tap() }
         XCTAssertTrue(codeTextView.exists)
     }
@@ -351,7 +359,7 @@ final class TextViewerDisplayOptionsTests: TextViewerTestBase {
     func testIndentGuidesToggle() {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        let toggle = app.switches["Indent Guides"]
+        let toggle = menuItem(label: "Indent Guides")
         if toggle.waitForExistence(timeout: 3) { toggle.tap() }
         XCTAssertTrue(codeTextView.exists)
     }
@@ -360,23 +368,21 @@ final class TextViewerDisplayOptionsTests: TextViewerTestBase {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         // Enable whitespace
         fontSizeMenuButton.tap()
-        if app.switches["Whitespace Indicators"].waitForExistence(timeout: 3) {
-            app.switches["Whitespace Indicators"].tap()
-        }
+        let whitespace = menuItem(label: "Whitespace Indicators")
+        if whitespace.waitForExistence(timeout: 3) { whitespace.tap() }
         // Enable indent guides
         fontSizeMenuButton.tap()
-        if app.switches["Indent Guides"].waitForExistence(timeout: 3) {
-            app.switches["Indent Guides"].tap()
-        }
+        let indent = menuItem(label: "Indent Guides")
+        if indent.waitForExistence(timeout: 3) { indent.tap() }
         XCTAssertTrue(codeTextView.exists)
         // Disable both
         fontSizeMenuButton.tap()
-        if app.switches["Whitespace Indicators"].waitForExistence(timeout: 3) {
-            app.switches["Whitespace Indicators"].tap()
+        if menuItem(label: "Whitespace Indicators").waitForExistence(timeout: 3) {
+            menuItem(label: "Whitespace Indicators").tap()
         }
         fontSizeMenuButton.tap()
-        if app.switches["Indent Guides"].waitForExistence(timeout: 3) {
-            app.switches["Indent Guides"].tap()
+        if menuItem(label: "Indent Guides").waitForExistence(timeout: 3) {
+            menuItem(label: "Indent Guides").tap()
         }
         XCTAssertTrue(codeTextView.exists)
     }
