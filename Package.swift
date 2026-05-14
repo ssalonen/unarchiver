@@ -7,8 +7,9 @@ let package = Package(
     name: "UnArchiver",
     platforms: [.iOS(.v17)],
     dependencies: [
-        .package(url: "https://github.com/tsolomko/SWCompression", from: "4.8.0"),
-        .package(url: "https://github.com/raspu/Highlightr",       from: "2.2.0"),
+        .package(url: "https://github.com/tsolomko/SWCompression",              from: "4.8.0"),
+        .package(url: "https://github.com/raspu/Highlightr",                    from: "2.2.0"),
+        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing",  from: "1.19.2"),
     ],
     targets: []
 )

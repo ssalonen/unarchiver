@@ -33,7 +33,6 @@ jobs:
             ${{ runner.os }}-spm-
 
       - name: Resolve Swift packages
-        if: steps.spm-cache.outputs.cache-hit != 'true'
         run: |
           xcodebuild -resolvePackageDependencies \
             -project UnArchiver.xcodeproj \
@@ -60,19 +59,27 @@ jobs:
 
       - name: Pick simulator
         run: |
+          # Pin to a specific model so snapshot reference images stay stable
           SIM_UDID=$(xcrun simctl list devices available -j | python3 -c "
           import json, sys
           data = json.load(sys.stdin)
           phones = [
               v for devs in data['devices'].values()
               for v in devs
-              if 'iPhone' in v.get('name', '') and v.get('isAvailable', False)
+              if 'iPhone 16 Pro' == v.get('name', '') and v.get('isAvailable', False)
           ]
+          if not phones:
+              # Fallback: any iPhone 16 variant
+              phones = [
+                  v for devs in data['devices'].values()
+                  for v in devs
+                  if 'iPhone 16' in v.get('name', '') and v.get('isAvailable', False)
+              ]
           phones.sort(key=lambda x: x['name'])
           print(phones[-1]['udid'] if phones else '')
           ")
           if [ -z "$SIM_UDID" ]; then
-            echo "No available iPhone simulator found" >&2; exit 1
+            echo "No available iPhone 16 simulator found" >&2; exit 1
           fi
           echo "SIM_UDID=$SIM_UDID" >> "$GITHUB_ENV"
           xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
@@ -89,7 +96,42 @@ jobs:
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
+            -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             2>&1 | xcbeautify --renderer github-actions
+
+      - name: Export code coverage
+        if: always()
+        run: |
+          XCRESULT=$(find ~/Library/Developer/Xcode/DerivedData -name "*.xcresult" | sort -t_ -k2 | tail -1)
+          if [ -n "$XCRESULT" ]; then
+            xcrun xccov view --report --json "$XCRESULT" > coverage.json
+            python3 - <<'PYEOF'
+          import json, sys
+          with open("coverage.json") as f:
+              data = json.load(f)
+          targets = data.get("targets", [])
+          app = next((t for t in targets if t.get("name","").startswith("UnArchiver") and not t.get("name","").startswith("UnArchiverUITests")), None)
+          if app:
+              pct = app.get("lineCoverage", 0) * 100
+              print(f"App line coverage: {pct:.1f}%")
+              for file in sorted(app.get("files", []), key=lambda x: x.get("lineCoverage", 1)):
+                  fc = file.get("lineCoverage", 1) * 100
+                  if fc < 80:
+                      print(f"  {file['name']:50s}  {fc:5.1f}%")
+          else:
+              print("App target not found in coverage report")
+          PYEOF
+          else
+            echo "No .xcresult found — skipping coverage export"
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.json
+          if-no-files-found: ignore

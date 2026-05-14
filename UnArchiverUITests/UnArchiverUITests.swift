@@ -1,4 +1,5 @@
 import XCTest
+import SnapshotTesting
 
 // MARK: - Shared helpers
 
@@ -550,12 +551,15 @@ final class TextViewerMarkdownTests: XCTestCase {
     }
 }
 
-// MARK: - Screenshot snapshots
+// MARK: - Snapshot regression tests
 //
-// These tests capture reference screenshots and attach them to the test result for
-// visual inspection. They do not diff against a stored baseline (no external dependency
-// required), but the attachments are preserved in the .xcresult bundle and in CI
-// artifacts, making regressions immediately visible during review.
+// Uses swift-snapshot-testing to diff screenshots against committed reference images
+// stored in UnArchiverUITests/__Snapshots__/SnapshotTests/.
+//
+// First-ever run (or after `isRecording = true`): writes reference images and fails.
+// Subsequent runs: compares pixels with 2 % tolerance and fails on regression.
+//
+// The simulator model must be pinned in CI via -destination to keep images stable.
 
 final class SnapshotTests: XCTestCase {
     private var app: XCUIApplication!
@@ -567,24 +571,39 @@ final class SnapshotTests: XCTestCase {
 
     override func tearDownWithError() throws { app = nil }
 
-    private func attach(_ screenshot: XCUIScreenshot, name: String) {
-        let attachment = XCTAttachment(screenshot: screenshot)
-        attachment.name = name
-        attachment.lifetime = .keepAlways
-        add(attachment)
+    // MARK: - Helpers
+
+    private func snap(
+        _ name: String,
+        precision: Float = 0.98,
+        file: StaticString = #file,
+        testName: String = #function
+    ) {
+        let image = XCUIScreen.main.screenshot().image
+        assertSnapshot(
+            of: image,
+            as: .image(precision: precision),
+            named: name,
+            file: file,
+            testName: testName
+        )
     }
+
+    // MARK: - Welcome screen
 
     func testSnapshotWelcomeScreen() {
         app.launch()
         XCTAssertTrue(app.staticTexts["UnArchiver"].waitForExistence(timeout: 5))
-        attach(XCUIScreen.main.screenshot(), name: "welcome-screen")
+        snap("welcome-screen")
     }
+
+    // MARK: - Plain text viewer
 
     func testSnapshotTextViewerPlain() {
         app.launchArguments = ["--uitesting"]
         app.launch()
         XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 10))
-        attach(XCUIScreen.main.screenshot(), name: "text-viewer-plain")
+        snap("text-viewer-plain")
     }
 
     func testSnapshotTextViewerWordWrapOff() {
@@ -593,7 +612,7 @@ final class SnapshotTests: XCTestCase {
         XCTAssertTrue(app.buttons["wordWrapButton"].waitForExistence(timeout: 5))
         app.buttons["wordWrapButton"].tap()
         XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 5))
-        attach(XCUIScreen.main.screenshot(), name: "text-viewer-word-wrap-off")
+        snap("text-viewer-word-wrap-off")
     }
 
     func testSnapshotTextViewerHexMode() {
@@ -602,14 +621,16 @@ final class SnapshotTests: XCTestCase {
         XCTAssertTrue(app.buttons["hexToggleButton"].waitForExistence(timeout: 5))
         app.buttons["hexToggleButton"].tap()
         XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 10))
-        attach(XCUIScreen.main.screenshot(), name: "text-viewer-hex-mode")
+        snap("text-viewer-hex-mode")
     }
+
+    // MARK: - JSON viewer
 
     func testSnapshotTextViewerJSON() {
         app.launchArguments = ["--uitesting-json"]
         app.launch()
         XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 10))
-        attach(XCUIScreen.main.screenshot(), name: "text-viewer-json")
+        snap("text-viewer-json")
     }
 
     func testSnapshotTextViewerJSONAutoformatted() {
@@ -622,21 +643,25 @@ final class SnapshotTests: XCTestCase {
             app.buttons["Autoformat"].tap()
         }
         XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 5))
-        attach(XCUIScreen.main.screenshot(), name: "text-viewer-json-autoformatted")
+        snap("text-viewer-json-autoformatted")
     }
+
+    // MARK: - XML viewer
 
     func testSnapshotTextViewerXML() {
         app.launchArguments = ["--uitesting-xml"]
         app.launch()
         XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 10))
-        attach(XCUIScreen.main.screenshot(), name: "text-viewer-xml")
+        snap("text-viewer-xml")
     }
+
+    // MARK: - Markdown viewer
 
     func testSnapshotTextViewerMarkdownSource() {
         app.launchArguments = ["--uitesting-markdown"]
         app.launch()
         XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 10))
-        attach(XCUIScreen.main.screenshot(), name: "text-viewer-markdown-source")
+        snap("text-viewer-markdown-source")
     }
 
     func testSnapshotTextViewerMarkdownRendered() {
@@ -649,7 +674,7 @@ final class SnapshotTests: XCTestCase {
             app.buttons["Rendered"].tap()
         }
         XCTAssertEqual(app.state, .runningForeground)
-        attach(XCUIScreen.main.screenshot(), name: "text-viewer-markdown-rendered")
+        snap("text-viewer-markdown-rendered")
     }
 }
 
