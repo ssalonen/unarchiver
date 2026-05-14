@@ -86,6 +86,9 @@ jobs:
             -destination "id=$SIM_UDID" \
             -configuration Debug \
             -clonedSourcePackagesDirPath SourcePackages \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -defaultTestExecutionTimeAllowance 300 \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \

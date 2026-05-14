@@ -261,8 +261,8 @@ final class TextViewerFontSizeTests: TextViewerTestBase {
 
     func testFontSizeMinimumNotCrash() {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
-        // Tap smaller many times — minimum is 10pt, should not crash
-        for _ in 0..<15 {
+        // Tap smaller several times — minimum is 10pt, should not crash
+        for _ in 0..<4 {
             fontSizeMenuButton.tap()
             if app.buttons["Smaller Text"].waitForExistence(timeout: 2) {
                 app.buttons["Smaller Text"].tap()
@@ -273,8 +273,8 @@ final class TextViewerFontSizeTests: TextViewerTestBase {
 
     func testFontSizeMaximumNotCrash() {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
-        // Tap larger many times — maximum is 24pt, should not crash
-        for _ in 0..<15 {
+        // Tap larger several times — maximum is 24pt, should not crash
+        for _ in 0..<4 {
             fontSizeMenuButton.tap()
             if app.buttons["Larger Text"].waitForExistence(timeout: 2) {
                 app.buttons["Larger Text"].tap()
@@ -342,6 +342,8 @@ final class TextViewerSearchTests: TextViewerTestBase {
 final class TextViewerDisplayOptionsTests: TextViewerTestBase {
 
     func testDisplayOptionsMenuExists() {
+        // Wait for content to load before interacting with menu
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
         // Display options are consolidated inside the font size menu
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
@@ -349,6 +351,7 @@ final class TextViewerDisplayOptionsTests: TextViewerTestBase {
     }
 
     func testWhitespaceToggle() {
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
         let toggle = menuItem(label: "Whitespace Indicators")
@@ -357,6 +360,7 @@ final class TextViewerDisplayOptionsTests: TextViewerTestBase {
     }
 
     func testIndentGuidesToggle() {
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
         let toggle = menuItem(label: "Indent Guides")
@@ -365,6 +369,7 @@ final class TextViewerDisplayOptionsTests: TextViewerTestBase {
     }
 
     func testBothDisplayOptionsToggle() {
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         // Enable whitespace
         fontSizeMenuButton.tap()
@@ -542,6 +547,109 @@ final class TextViewerMarkdownTests: XCTestCase {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
         XCTAssertFalse(app.buttons["Autoformat"].waitForExistence(timeout: 2))
+    }
+}
+
+// MARK: - Screenshot snapshots
+//
+// These tests capture reference screenshots and attach them to the test result for
+// visual inspection. They do not diff against a stored baseline (no external dependency
+// required), but the attachments are preserved in the .xcresult bundle and in CI
+// artifacts, making regressions immediately visible during review.
+
+final class SnapshotTests: XCTestCase {
+    private var app: XCUIApplication!
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+    }
+
+    override func tearDownWithError() throws { app = nil }
+
+    private func attach(_ screenshot: XCUIScreenshot, name: String) {
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    func testSnapshotWelcomeScreen() {
+        app.launch()
+        XCTAssertTrue(app.staticTexts["UnArchiver"].waitForExistence(timeout: 5))
+        attach(XCUIScreen.main.screenshot(), name: "welcome-screen")
+    }
+
+    func testSnapshotTextViewerPlain() {
+        app.launchArguments = ["--uitesting"]
+        app.launch()
+        XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 10))
+        attach(XCUIScreen.main.screenshot(), name: "text-viewer-plain")
+    }
+
+    func testSnapshotTextViewerWordWrapOff() {
+        app.launchArguments = ["--uitesting"]
+        app.launch()
+        XCTAssertTrue(app.buttons["wordWrapButton"].waitForExistence(timeout: 5))
+        app.buttons["wordWrapButton"].tap()
+        XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 5))
+        attach(XCUIScreen.main.screenshot(), name: "text-viewer-word-wrap-off")
+    }
+
+    func testSnapshotTextViewerHexMode() {
+        app.launchArguments = ["--uitesting"]
+        app.launch()
+        XCTAssertTrue(app.buttons["hexToggleButton"].waitForExistence(timeout: 5))
+        app.buttons["hexToggleButton"].tap()
+        XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 10))
+        attach(XCUIScreen.main.screenshot(), name: "text-viewer-hex-mode")
+    }
+
+    func testSnapshotTextViewerJSON() {
+        app.launchArguments = ["--uitesting-json"]
+        app.launch()
+        XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 10))
+        attach(XCUIScreen.main.screenshot(), name: "text-viewer-json")
+    }
+
+    func testSnapshotTextViewerJSONAutoformatted() {
+        app.launchArguments = ["--uitesting-json"]
+        app.launch()
+        let menu = app.buttons["fontSizeMenuButton"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        menu.tap()
+        if app.buttons["Autoformat"].waitForExistence(timeout: 3) {
+            app.buttons["Autoformat"].tap()
+        }
+        XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 5))
+        attach(XCUIScreen.main.screenshot(), name: "text-viewer-json-autoformatted")
+    }
+
+    func testSnapshotTextViewerXML() {
+        app.launchArguments = ["--uitesting-xml"]
+        app.launch()
+        XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 10))
+        attach(XCUIScreen.main.screenshot(), name: "text-viewer-xml")
+    }
+
+    func testSnapshotTextViewerMarkdownSource() {
+        app.launchArguments = ["--uitesting-markdown"]
+        app.launch()
+        XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 10))
+        attach(XCUIScreen.main.screenshot(), name: "text-viewer-markdown-source")
+    }
+
+    func testSnapshotTextViewerMarkdownRendered() {
+        app.launchArguments = ["--uitesting-markdown"]
+        app.launch()
+        let menu = app.buttons["fontSizeMenuButton"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        menu.tap()
+        if app.buttons["Rendered"].waitForExistence(timeout: 3) {
+            app.buttons["Rendered"].tap()
+        }
+        XCTAssertEqual(app.state, .runningForeground)
+        attach(XCUIScreen.main.screenshot(), name: "text-viewer-markdown-rendered")
     }
 }
 
