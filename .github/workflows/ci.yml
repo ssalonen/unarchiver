@@ -2,9 +2,13 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   build:
@@ -42,21 +46,6 @@ jobs:
       - name: Install xcbeautify
         run: brew install xcbeautify
 
-      - name: Build app (simulator, no signing)
-        run: |
-          set -o pipefail
-          xcodebuild build \
-            -project UnArchiver.xcodeproj \
-            -scheme UnArchiver \
-            -destination 'generic/platform=iOS Simulator' \
-            -configuration Debug \
-            -clonedSourcePackagesDirPath SourcePackages \
-            ONLY_ACTIVE_ARCH=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            2>&1 | xcbeautify --renderer github-actions
-
       - name: Pick simulator
         run: |
           # Pin to a specific model so snapshot reference images stay stable
@@ -84,15 +73,30 @@ jobs:
           echo "SIM_UDID=$SIM_UDID" >> "$GITHUB_ENV"
           xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
 
-      - name: Run UI tests
+      - name: Build for testing
         run: |
           set -o pipefail
-          xcodebuild test \
+          xcodebuild build-for-testing \
             -project UnArchiver.xcodeproj \
             -scheme UnArchiver \
             -destination "id=$SIM_UDID" \
             -configuration Debug \
+            -derivedDataPath .build/DerivedData \
             -clonedSourcePackagesDirPath SourcePackages \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            2>&1 | xcbeautify --renderer github-actions
+
+      - name: Run UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project UnArchiver.xcodeproj \
+            -scheme UnArchiver \
+            -destination "id=$SIM_UDID" \
+            -configuration Debug \
+            -derivedDataPath .build/DerivedData \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
@@ -105,27 +109,88 @@ jobs:
       - name: Export code coverage
         if: always()
         run: |
-          XCRESULT=$(find ~/Library/Developer/Xcode/DerivedData -name "*.xcresult" | sort -t_ -k2 | tail -1)
-          if [ -n "$XCRESULT" ]; then
-            xcrun xccov view --report --json "$XCRESULT" > coverage.json
-            python3 - <<'PYEOF'
-          import json, sys
+          XCRESULT=$(find .build/DerivedData -name "*.xcresult" -maxdepth 6 | sort | tail -1)
+          if [ -z "$XCRESULT" ]; then
+            echo "No .xcresult found — skipping coverage export"
+            exit 0
+          fi
+          xcrun xccov view --report --json "$XCRESULT" > coverage.json 2>/dev/null || {
+            echo "xccov failed — skipping coverage summary"
+            exit 0
+          }
+          python3 - <<'PYEOF'
+          import json, os
+
           with open("coverage.json") as f:
               data = json.load(f)
+
           targets = data.get("targets", [])
-          app = next((t for t in targets if t.get("name","").startswith("UnArchiver") and not t.get("name","").startswith("UnArchiverUITests")), None)
-          if app:
-              pct = app.get("lineCoverage", 0) * 100
-              print(f"App line coverage: {pct:.1f}%")
-              for file in sorted(app.get("files", []), key=lambda x: x.get("lineCoverage", 1)):
-                  fc = file.get("lineCoverage", 1) * 100
-                  if fc < 80:
-                      print(f"  {file['name']:50s}  {fc:5.1f}%")
-          else:
+          app = next(
+              (t for t in targets
+               if t.get("name","").startswith("UnArchiver")
+               and not t.get("name","").startswith("UnArchiverUITests")),
+              None
+          )
+
+          if not app:
               print("App target not found in coverage report")
+              raise SystemExit(0)
+
+          total = app.get("lineCoverage", 0) * 100
+          files = sorted(app.get("files", []), key=lambda x: x.get("lineCoverage", 0))
+
+          # ── Job summary (shown on the Actions run page) ──────────────────
+          bar_filled = int(total / 5)
+          bar = "█" * bar_filled + "░" * (20 - bar_filled)
+          emoji = "✅" if total >= 80 else "⚠️" if total >= 60 else "❌"
+
+          summary_lines = [
+              f"## {emoji} Code Coverage — {total:.1f}%",
+              f"`{bar}` {total:.1f}%",
+              "",
+              "| File | Coverage |",
+              "|------|----------|",
+          ]
+          for f in files:
+              fc = f.get("lineCoverage", 0) * 100
+              icon = "✅" if fc >= 80 else "⚠️" if fc >= 60 else "❌"
+              summary_lines.append(f"| {f['name']} | {icon} {fc:.1f}% |")
+
+          summary = "\n".join(summary_lines)
+
+          step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if step_summary:
+              with open(step_summary, "a") as f:
+                  f.write(summary + "\n")
+
+          # ── PR comment body (written to file for next step) ──────────────
+          with open("coverage_comment.md", "w") as f:
+              f.write("<!-- coverage-report -->\n")
+              f.write(summary + "\n")
+
+          print(f"App line coverage: {total:.1f}%")
+          for f in files:
+              fc = f.get("lineCoverage", 0) * 100
+              if fc < 80:
+                  print(f"  {f['name']:50s}  {fc:.1f}%")
           PYEOF
+
+      - name: Post coverage comment on PR
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f coverage_comment.md ]; then exit 0; fi
+          PR=${{ github.event.pull_request.number }}
+          MARKER="<!-- coverage-report -->"
+          # Find existing comment to update rather than posting a new one
+          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${PR}/comments" \
+            --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
+          if [ -n "$COMMENT_ID" ]; then
+            gh api "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" \
+              -X PATCH -f body="$(cat coverage_comment.md)"
           else
-            echo "No .xcresult found — skipping coverage export"
+            gh pr comment "$PR" --body-file coverage_comment.md
           fi
 
       - name: Upload coverage report
