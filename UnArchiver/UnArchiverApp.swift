@@ -54,9 +54,10 @@ private struct UITestRootView: View {
         return (plainContent, "txt")
     }
 
-    // 150 lines × 500 chars — forces both vertical and horizontal scrolling
-    private static let plainContent: String = (1...150).map { i in
-        String(format: "Line %03d: ", i) + String(repeating: "ABCDEFGHIJ", count: 50)
+    // 30 lines × 200 chars — enough for vertical + horizontal scroll tests;
+    // kept small so the hex dump (~19 KB) doesn't block the main thread in tests.
+    private static let plainContent: String = (1...30).map { i in
+        String(format: "Line %03d: ", i) + String(repeating: "ABCDEFGHIJ", count: 19)
     }.joined(separator: "\n")
 
     private static let jsonContent = #"""
