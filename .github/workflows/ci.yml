@@ -46,21 +46,6 @@ jobs:
       - name: Install xcbeautify
         run: brew install xcbeautify
 
-      - name: Build app (simulator, no signing)
-        run: |
-          set -o pipefail
-          xcodebuild build \
-            -project UnArchiver.xcodeproj \
-            -scheme UnArchiver \
-            -destination 'generic/platform=iOS Simulator' \
-            -configuration Debug \
-            -clonedSourcePackagesDirPath SourcePackages \
-            ONLY_ACTIVE_ARCH=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            2>&1 | xcbeautify --renderer github-actions
-
       - name: Pick simulator
         run: |
           # Pin to a specific model so snapshot reference images stay stable
@@ -88,15 +73,30 @@ jobs:
           echo "SIM_UDID=$SIM_UDID" >> "$GITHUB_ENV"
           xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
 
-      - name: Run UI tests
+      - name: Build for testing
         run: |
           set -o pipefail
-          xcodebuild test \
+          xcodebuild build-for-testing \
             -project UnArchiver.xcodeproj \
             -scheme UnArchiver \
             -destination "id=$SIM_UDID" \
             -configuration Debug \
+            -derivedDataPath .build/DerivedData \
             -clonedSourcePackagesDirPath SourcePackages \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            2>&1 | xcbeautify --renderer github-actions
+
+      - name: Run UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project UnArchiver.xcodeproj \
+            -scheme UnArchiver \
+            -destination "id=$SIM_UDID" \
+            -configuration Debug \
+            -derivedDataPath .build/DerivedData \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
@@ -109,7 +109,7 @@ jobs:
       - name: Export code coverage
         if: always()
         run: |
-          XCRESULT=$(find ~/Library/Developer/Xcode/DerivedData -name "*.xcresult" -maxdepth 6 | sort | tail -1)
+          XCRESULT=$(find .build/DerivedData -name "*.xcresult" -maxdepth 6 | sort | tail -1)
           if [ -z "$XCRESULT" ]; then
             echo "No .xcresult found — skipping coverage export"
             exit 0
