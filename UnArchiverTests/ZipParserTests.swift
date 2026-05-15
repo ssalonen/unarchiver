@@ -224,7 +224,7 @@ final class ZipParserTests: XCTestCase {
 
     func testExtract_unsupportedCompression_throws() throws {
         // Build a ZIP where the CD says compression method 99 (unsupported)
-        var content = Data("dummy".utf8)
+        let content = Data("dummy".utf8)
         var zip = makeZip(filename: "f.txt", content: content)
         // Patch the compression method in the central directory.
         // The CD starts after the local header (30 + filename_len + content_len).
