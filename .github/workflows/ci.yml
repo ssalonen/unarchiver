@@ -97,6 +97,7 @@ jobs:
             -destination "id=$SIM_UDID" \
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
+            -resultBundlePath .build/unit-tests.xcresult \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
@@ -115,33 +116,19 @@ jobs:
             -destination "id=$SIM_UDID" \
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
+            -resultBundlePath .build/ui-tests.xcresult \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
-            -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             2>&1 | xcbeautify --renderer github-actions
 
-      - name: Merge test results
-        if: always()
-        run: |
-          XCRESULTS=()
-          while IFS= read -r f; do XCRESULTS+=("$f"); done \
-            < <(find .build/DerivedData -name "*.xcresult" -maxdepth 6 | sort)
-          if [ ${#XCRESULTS[@]} -ge 2 ]; then
-            xcrun xcresulttool merge "${XCRESULTS[@]}" \
-              --output-path .build/DerivedData/merged.xcresult 2>/dev/null \
-            || cp -r "${XCRESULTS[-1]}" .build/DerivedData/merged.xcresult
-          elif [ ${#XCRESULTS[@]} -eq 1 ]; then
-            cp -r "${XCRESULTS[0]}" .build/DerivedData/merged.xcresult
-          fi
-
       - name: Export code coverage
         if: always()
         run: |
-          XCRESULT=.build/DerivedData/merged.xcresult
+          XCRESULT=.build/unit-tests.xcresult
           if [ ! -d "$XCRESULT" ]; then
             XCRESULT=$(find .build/DerivedData -name "*.xcresult" -maxdepth 6 | sort | tail -1)
           fi
