@@ -93,11 +93,10 @@ jobs:
           set -o pipefail
           xcodebuild test-without-building \
             -project UnArchiver.xcodeproj \
-            -scheme UnArchiver \
+            -scheme UnArchiverUnitTests \
             -destination "id=$SIM_UDID" \
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
-            -only-testing:UnArchiverTests \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
@@ -116,7 +115,6 @@ jobs:
             -destination "id=$SIM_UDID" \
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
-            -only-testing:UnArchiverUITests \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
