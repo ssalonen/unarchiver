@@ -211,7 +211,8 @@ final class TarParserTests: XCTestCase {
         let entries = try TarParser.parse(data: archive)
         XCTAssertEqual(entries.count, 1)
         XCTAssertNotNil(entries[0].entry.modificationDate)
-        XCTAssertEqual(entries[0].entry.modificationDate?.timeIntervalSince1970, 1234567890, accuracy: 1.0)
+        let ts = try XCTUnwrap(entries[0].entry.modificationDate).timeIntervalSince1970
+        XCTAssertEqual(ts, 1234567890, accuracy: 1.0)
     }
 
     func testParse_invalidChecksum_skipsEntry() throws {
