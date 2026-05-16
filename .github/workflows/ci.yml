@@ -88,6 +88,30 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             2>&1 | xcbeautify --renderer github-actions
 
+      - name: Run UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project UnArchiver.xcodeproj \
+            -scheme UnArchiver \
+            -destination "id=$SIM_UDID" \
+            -configuration Debug \
+            -derivedDataPath .build/DerivedData \
+            -resultBundlePath .build/ui-tests.xcresult \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -maximum-test-execution-time-allowance 300 \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            2>&1 | xcbeautify --renderer github-actions
+
+      - name: Reset simulator app state
+        if: always()
+        run: |
+          xcrun simctl terminate "$SIM_UDID" com.yourcompany.unarchiver 2>/dev/null || true
+          xcrun simctl uninstall "$SIM_UDID" com.yourcompany.unarchiver 2>/dev/null || true
+
       - name: Run unit tests
         run: |
           set -o pipefail
@@ -102,24 +126,6 @@ jobs:
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
             -enableCodeCoverage YES \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            2>&1 | xcbeautify --renderer github-actions
-
-      - name: Run UI tests
-        run: |
-          set -o pipefail
-          xcodebuild test-without-building \
-            -project UnArchiver.xcodeproj \
-            -scheme UnArchiver \
-            -destination "id=$SIM_UDID" \
-            -configuration Debug \
-            -derivedDataPath .build/DerivedData \
-            -resultBundlePath .build/ui-tests.xcresult \
-            -parallel-testing-enabled NO \
-            -test-timeouts-enabled YES \
-            -maximum-test-execution-time-allowance 300 \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
