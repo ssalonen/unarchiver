@@ -83,6 +83,7 @@ jobs:
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
             -clonedSourcePackagesDirPath SourcePackages \
+            -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -140,7 +141,7 @@ jobs:
             echo "No .xcresult found — skipping coverage export"
             exit 0
           fi
-          xcrun xccov view --report --json "$XCRESULT" > coverage.json 2>/dev/null || {
+          xcrun xccov view --report --json "$XCRESULT" > coverage.json || {
             echo "xccov failed — skipping coverage summary"
             exit 0
           }
