@@ -357,7 +357,6 @@
 					};
 					AC0200000000000000000001 = {
 						CreatedOnToolsVersion = 15.0;
-						TestTargetID = AA0200000000000000000001;
 					};
 				};
 			};
