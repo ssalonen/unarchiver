@@ -114,7 +114,6 @@ jobs:
 
       - name: Run unit tests
         run: |
-          set -o pipefail
           xcodebuild test-without-building \
             -project UnArchiver.xcodeproj \
             -scheme UnArchiverUnitTests \
@@ -125,10 +124,10 @@ jobs:
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
+            -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            2>&1 | xcbeautify --renderer github-actions
+            CODE_SIGNING_REQUIRED=NO
 
       - name: Export code coverage
         if: always()
