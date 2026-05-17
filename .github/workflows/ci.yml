@@ -83,7 +83,6 @@ jobs:
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
             -clonedSourcePackagesDirPath SourcePackages \
-            -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -102,6 +101,7 @@ jobs:
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
+            -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -125,7 +125,6 @@ jobs:
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
-            -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
@@ -133,7 +132,7 @@ jobs:
       - name: Export code coverage
         if: always()
         run: |
-          XCRESULT=.build/unit-tests.xcresult
+          XCRESULT=.build/ui-tests.xcresult
           if [ ! -d "$XCRESULT" ]; then
             XCRESULT=$(find .build/DerivedData -name "*.xcresult" -maxdepth 6 | sort | tail -1)
           fi
