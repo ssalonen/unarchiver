@@ -73,7 +73,51 @@ jobs:
           echo "SIM_UDID=$SIM_UDID" >> "$GITHUB_ENV"
           xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
 
-      - name: Build for testing
+      # ── Unit tests ────────────────────────────────────────────────────────
+      # Build WITHOUT -enableCodeCoverage so the binary is not instrumented.
+      # BUNDLE_LOADER tests injected into an instrumented binary cause
+      # xcodebuild to wait ~62 s for profdata harvest, then fail (exit 65).
+      - name: Build for unit tests
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project UnArchiver.xcodeproj \
+            -scheme UnArchiver \
+            -destination "id=$SIM_UDID" \
+            -configuration Debug \
+            -derivedDataPath .build/DerivedDataUnit \
+            -clonedSourcePackagesDirPath SourcePackages \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            2>&1 | xcbeautify --renderer github-actions
+
+      - name: Run unit tests
+        run: |
+          xcodebuild test-without-building \
+            -project UnArchiver.xcodeproj \
+            -scheme UnArchiverUnitTests \
+            -destination "id=$SIM_UDID" \
+            -configuration Debug \
+            -derivedDataPath .build/DerivedDataUnit \
+            -resultBundlePath .build/unit-tests.xcresult \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -maximum-test-execution-time-allowance 300 \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Reset simulator app state
+        if: always()
+        run: |
+          xcrun simctl terminate "$SIM_UDID" com.yourcompany.unarchiver 2>/dev/null || true
+          xcrun simctl uninstall "$SIM_UDID" com.yourcompany.unarchiver 2>/dev/null || true
+
+      # ── UI tests + coverage ───────────────────────────────────────────────
+      # Separate build WITH -enableCodeCoverage. XCUITests harvest profdata
+      # from the xctest-runner process, so this works correctly.
+      - name: Build for UI tests
         run: |
           set -o pipefail
           xcodebuild build-for-testing \
@@ -83,6 +127,7 @@ jobs:
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
             -clonedSourcePackagesDirPath SourcePackages \
+            -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -106,28 +151,6 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             2>&1 | xcbeautify --renderer github-actions
-
-      - name: Reset simulator app state
-        if: always()
-        run: |
-          xcrun simctl terminate "$SIM_UDID" com.yourcompany.unarchiver 2>/dev/null || true
-          xcrun simctl uninstall "$SIM_UDID" com.yourcompany.unarchiver 2>/dev/null || true
-
-      - name: Run unit tests
-        run: |
-          xcodebuild test-without-building \
-            -project UnArchiver.xcodeproj \
-            -scheme UnArchiverUnitTests \
-            -destination "id=$SIM_UDID" \
-            -configuration Debug \
-            -derivedDataPath .build/DerivedData \
-            -resultBundlePath .build/unit-tests.xcresult \
-            -parallel-testing-enabled NO \
-            -test-timeouts-enabled YES \
-            -maximum-test-execution-time-allowance 300 \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
 
       - name: Export code coverage
         if: always()
