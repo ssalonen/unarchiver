@@ -34,6 +34,20 @@
                ReferencedContainer = "container:UnArchiver.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AC0200000000000000000001"
+               BuildableName = "UnArchiverTests.xctest"
+               BlueprintName = "UnArchiverTests"
+               ReferencedContainer = "container:UnArchiver.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
