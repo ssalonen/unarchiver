@@ -74,6 +74,7 @@ struct SyntaxTextView: UIViewRepresentable {
                 tv.textContainer.widthTracksTextView = true
                 tv.textContainer.lineBreakMode = .byWordWrapping
                 tv.showsHorizontalScrollIndicator = false
+                tv.contentOffset = CGPoint(x: 0, y: tv.contentOffset.y)
             } else {
                 tv.textContainer.widthTracksTextView = false
                 tv.textContainer.size = CGSize(
