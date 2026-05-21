@@ -11,6 +11,92 @@ permissions:
   pull-requests: write
 
 jobs:
+  # ── Fast path: only the word wrap + scrolling UI tests ─────────────────────
+  # DerivedData is cached by app-source hash, not test-file hash, so pushing
+  # only test changes gets a cache hit and pays only incremental recompile (~30s)
+  # instead of a full 4-min rebuild.
+  word-wrap:
+    name: Word Wrap & Scrolling Tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Select Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+
+      - name: Cache SPM packages
+        uses: actions/cache@v5
+        with:
+          path: SourcePackages
+          key: ${{ runner.os }}-spm-${{ hashFiles('UnArchiver.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: ${{ runner.os }}-spm-
+
+      - name: Resolve Swift packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project UnArchiver.xcodeproj \
+            -scheme UnArchiver \
+            -clonedSourcePackagesDirPath SourcePackages
+
+      - name: Pick simulator
+        run: |
+          SIM_UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          phones = [v for devs in data['devices'].values() for v in devs
+                    if 'iPhone 17 Pro' == v.get('name','') and v.get('isAvailable', False)]
+          if not phones:
+              phones = [v for devs in data['devices'].values() for v in devs
+                        if 'iPhone 17' in v.get('name','') and v.get('isAvailable', False)]
+          phones.sort(key=lambda x: x['name'])
+          print(phones[-1]['udid'] if phones else '')
+          ")
+          if [ -z "$SIM_UDID" ]; then echo "No iPhone 17 simulator found" >&2; exit 1; fi
+          echo "SIM_UDID=$SIM_UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
+
+      # Key on app sources only — test-file-only changes get a cache hit.
+      - name: Cache DerivedData (app sources key)
+        uses: actions/cache@v5
+        with:
+          path: .build/DerivedDataWW
+          key: ${{ runner.os }}-dd-ww-${{ hashFiles('UnArchiver/**/*.swift', 'UnArchiver.xcodeproj/project.pbxproj', 'UnArchiver.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: ${{ runner.os }}-dd-ww-
+
+      - name: Build for testing
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project UnArchiver.xcodeproj \
+            -scheme UnArchiver \
+            -destination "id=$SIM_UDID" \
+            -configuration Debug \
+            -derivedDataPath .build/DerivedDataWW \
+            -clonedSourcePackagesDirPath SourcePackages \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            2>&1 | grep -E "^(error:|Build (complete|SUCCEEDED|FAILED)|.*: error:|.*: warning:)" || true
+
+      - name: Run word wrap + scrolling tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project UnArchiver.xcodeproj \
+            -scheme UnArchiver \
+            -destination "id=$SIM_UDID" \
+            -configuration Debug \
+            -derivedDataPath .build/DerivedDataWW \
+            -only-testing:UnArchiverUITests/TextViewerWordWrapBehaviorTests \
+            -only-testing:UnArchiverUITests/TextViewerScrollingTests \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -maximum-test-execution-time-allowance 120 \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            2>&1 | tee /tmp/ww-tests.log; TEST_EXIT=${PIPESTATUS[0]}
+          grep -E "Test Case|passed|failed|\*\* TEST" /tmp/ww-tests.log || true
+          exit $TEST_EXIT
+
+  # ── Full build + unit tests + UI tests + coverage ──────────────────────────
   build:
     name: Build (iOS Simulator)
     runs-on: macos-latest
