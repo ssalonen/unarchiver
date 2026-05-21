@@ -194,6 +194,12 @@ final class IndentGuideTextView: UITextView {
         didSet { guideOverlay.setNeedsDisplay() }
     }
 
+    // Exposes scroll geometry to XCUITest via .value without requiring VoiceOver.
+    override var accessibilityValue: String? {
+        get { "cw:\(Int(contentSize.width)),ch:\(Int(contentSize.height)),ox:\(Int(contentOffset.x)),oy:\(Int(contentOffset.y))" }
+        set { }
+    }
+
     private lazy var guideOverlay: IndentGuideOverlay = {
         let v = IndentGuideOverlay()
         v.backgroundColor = .clear

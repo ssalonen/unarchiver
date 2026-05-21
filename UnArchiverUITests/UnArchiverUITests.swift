@@ -103,66 +103,251 @@ final class TextViewerLoadingTests: TextViewerTestBase {
     }
 }
 
-// MARK: - Word wrap
+// MARK: - Word wrap behavioral tests
+//
+// Uses --uitesting-lorem: 50 lines × ~450 chars per line.
+// IndentGuideTextView exposes scroll geometry via accessibilityValue:
+//   "cw:NNN,ch:NNN,ox:NNN,oy:NNN"
+// so these tests assert real layout state, not just that the view survives.
 
-final class TextViewerWordWrapTests: TextViewerTestBase {
+final class TextViewerWordWrapBehaviorTests: XCTestCase {
+    private var app: XCUIApplication!
 
-    func testWordWrapDefaultIsOn() {
-        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launchArguments = ["--uitesting-lorem"]
+        app.launch()
     }
 
-    func testWordWrapToggleOff() {
+    override func tearDownWithError() throws { app = nil }
+
+    private var textView: XCUIElement    { app.codeTextView }
+    private var wordWrapButton: XCUIElement { app.buttons["wordWrapButton"] }
+
+    private struct ScrollState {
+        let contentWidth: Int
+        let contentHeight: Int
+        let offsetX: Int
+        let offsetY: Int
+    }
+
+    private func scrollState(of el: XCUIElement) -> ScrollState? {
+        guard let raw = el.value as? String else { return nil }
+        var d = [String: Int]()
+        for pair in raw.split(separator: ",") {
+            let kv = pair.split(separator: ":")
+            guard kv.count == 2, let v = Int(kv[1]) else { continue }
+            d[String(kv[0])] = v
+        }
+        guard let cw = d["cw"], let ch = d["ch"],
+              let ox = d["ox"], let oy = d["oy"] else { return nil }
+        return ScrollState(contentWidth: cw, contentHeight: ch, offsetX: ox, offsetY: oy)
+    }
+
+    /// Polls until `condition` is true or `timeout` seconds have elapsed.
+    private func waitUntil(timeout: TimeInterval = 3, condition: () -> Bool) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+    }
+
+    // Word wrap ON (default): content width must not exceed the frame — text is wrapping.
+    func testWordWrapOnConstrainsContentWidth() {
+        XCTAssertTrue(textView.waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 0.5) // let layout settle
+        guard let state = scrollState(of: textView) else {
+            XCTFail("IndentGuideTextView must expose scroll geometry via accessibilityValue")
+            return
+        }
+        let frameWidth = Int(textView.frame.width)
+        XCTAssertLessThanOrEqual(
+            state.contentWidth, frameWidth + 50,
+            "Word wrap ON: content width \(state.contentWidth) must fit within frame width \(frameWidth)"
+        )
+    }
+
+    // Word wrap OFF: ~450-char lines must expand content far beyond the frame width.
+    func testWordWrapOffExpandsContentWidth() {
         XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
         wordWrapButton.tap()
-        XCTAssertTrue(codeTextView.exists, "Text view must survive toggling word wrap off")
+        XCTAssertTrue(textView.waitForExistence(timeout: 5))
+        let frameWidth = Int(textView.frame.width)
+        var state: ScrollState?
+        waitUntil { state = self.scrollState(of: self.textView); return (state?.contentWidth ?? 0) > frameWidth * 3 }
+        guard let s = state else { XCTFail("accessibilityValue unavailable"); return }
+        XCTAssertGreaterThan(
+            s.contentWidth, frameWidth * 3,
+            "Word wrap OFF: content width \(s.contentWidth) must far exceed frame width \(frameWidth)"
+        )
     }
 
-    func testWordWrapToggleOnAndOff() {
+    // Swiping left with word wrap OFF must actually advance contentOffset.x.
+    func testHorizontalSwipeScrollsWhenWrapOff() {
         XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
-        wordWrapButton.tap() // off
-        XCTAssertTrue(codeTextView.exists)
-        wordWrapButton.tap() // on again
-        XCTAssertTrue(codeTextView.exists)
+        wordWrapButton.tap()
+        XCTAssertTrue(textView.waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 0.5)
+
+        guard let before = scrollState(of: textView) else { XCTFail("Before state missing"); return }
+        XCTAssertEqual(before.offsetX, 0, "View should start at horizontal offset 0")
+
+        textView.swipeLeft()
+
+        var after: ScrollState?
+        waitUntil { after = self.scrollState(of: self.textView); return (after?.offsetX ?? 0) > 0 }
+
+        XCTAssertGreaterThan(
+            after?.offsetX ?? 0, 0,
+            "Swiping left with word wrap OFF must increase contentOffset.x"
+        )
     }
 
-    func testWordWrapRapidTogglesDoNotCrash() {
+    // Swiping left with word wrap ON must NOT move content horizontally.
+    func testHorizontalSwipeDoesNotScrollWhenWrapOn() {
+        XCTAssertTrue(textView.waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 0.5)
+
+        textView.swipeLeft()
+        Thread.sleep(forTimeInterval: 0.5)
+
+        guard let state = scrollState(of: textView) else { XCTFail("State missing"); return }
+        XCTAssertEqual(
+            state.offsetX, 0,
+            "Swiping left with word wrap ON must not scroll content horizontally"
+        )
+    }
+
+    // Toggling ON→OFF→ON must restore content width to frame-constrained dimensions.
+    func testWordWrapRoundtripRestoresContentWidth() {
+        XCTAssertTrue(textView.waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 0.5)
+        let frameWidth = Int(textView.frame.width)
+
+        guard let initial = scrollState(of: textView) else { XCTFail("Initial state missing"); return }
+        XCTAssertLessThanOrEqual(initial.contentWidth, frameWidth + 50, "Should start wrapped")
+
+        wordWrapButton.tap() // OFF
+        var offState: ScrollState?
+        waitUntil { offState = self.scrollState(of: self.textView); return (offState?.contentWidth ?? 0) > frameWidth * 3 }
+        XCTAssertGreaterThan(offState?.contentWidth ?? 0, frameWidth * 3, "Wrap OFF must expand width")
+
+        wordWrapButton.tap() // ON again
+        var onState: ScrollState?
+        waitUntil { onState = self.scrollState(of: self.textView); return (onState?.contentWidth ?? 0) <= frameWidth + 50 }
+        XCTAssertLessThanOrEqual(
+            onState?.contentWidth ?? Int.max, frameWidth + 50,
+            "Toggling back ON must re-constrain content width. Got \(onState?.contentWidth ?? -1)"
+        )
+    }
+
+    // After scrolling right with wrap OFF, re-enabling wrap must reset horizontal offset to 0.
+    func testEnablingWrapResetsHorizontalOffset() {
+        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
+        wordWrapButton.tap() // OFF
+        XCTAssertTrue(textView.waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 0.5)
+
+        textView.swipeLeft()
+        waitUntil { (self.scrollState(of: self.textView)?.offsetX ?? 0) > 0 }
+
+        wordWrapButton.tap() // ON
+        Thread.sleep(forTimeInterval: 0.5)
+
+        guard let state = scrollState(of: textView) else { XCTFail("State missing"); return }
+        XCTAssertEqual(state.offsetX, 0, "Re-enabling word wrap must reset horizontal scroll offset to 0")
+    }
+
+    // Rapid toggles must not crash.
+    func testRapidWordWrapTogglesDoNotCrash() {
         XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
         for _ in 0..<6 { wordWrapButton.tap() }
-        XCTAssertTrue(codeTextView.exists)
+        XCTAssertTrue(textView.exists)
     }
 }
 
-// MARK: - Scrolling
+// MARK: - Scrolling behavioral tests
 
 final class TextViewerScrollingTests: TextViewerTestBase {
 
-    func testVerticalScrollWordWrapOn() {
+    private struct ScrollState { let offsetX: Int; let offsetY: Int }
+
+    private func scrollState(of el: XCUIElement) -> ScrollState {
+        var ox = 0, oy = 0
+        if let raw = el.value as? String {
+            for pair in raw.split(separator: ",") {
+                let kv = pair.split(separator: ":")
+                guard kv.count == 2, let v = Int(kv[1]) else { continue }
+                if kv[0] == "ox" { ox = v }
+                if kv[0] == "oy" { oy = v }
+            }
+        }
+        return ScrollState(offsetX: ox, offsetY: oy)
+    }
+
+    private func waitUntil(timeout: TimeInterval = 3, condition: () -> Bool) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+    }
+
+    // Swiping up with word wrap ON must increase contentOffset.y.
+    func testVerticalSwipeScrollsWrapOn() {
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 0.5)
+        let before = scrollState(of: codeTextView).offsetY
         codeTextView.swipeUp()
-        codeTextView.swipeUp()
-        codeTextView.swipeDown()
-        XCTAssertTrue(codeTextView.exists)
+        var after = before
+        waitUntil { after = self.scrollState(of: self.codeTextView).offsetY; return after > before }
+        XCTAssertGreaterThan(after, before, "Swiping up must increase vertical scroll offset (wrap ON)")
     }
 
-    func testVerticalScrollWordWrapOff() {
+    // Swiping up with word wrap OFF must increase contentOffset.y.
+    func testVerticalSwipeScrollsWrapOff() {
         XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
         wordWrapButton.tap()
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 0.5)
+        let before = scrollState(of: codeTextView).offsetY
         codeTextView.swipeUp()
-        codeTextView.swipeUp()
-        codeTextView.swipeDown()
-        XCTAssertTrue(codeTextView.exists)
+        var after = before
+        waitUntil { after = self.scrollState(of: self.codeTextView).offsetY; return after > before }
+        XCTAssertGreaterThan(after, before, "Swiping up must increase vertical scroll offset (wrap OFF)")
     }
 
-    func testHorizontalScrollWordWrapOff() {
+    // Swiping left with word wrap OFF must increase contentOffset.x.
+    func testHorizontalSwipeScrollsWrapOff() {
         XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
         wordWrapButton.tap()
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
-        // Lines are 500+ chars — horizontal scroll must be possible
+        Thread.sleep(forTimeInterval: 0.5)
+        XCTAssertEqual(scrollState(of: codeTextView).offsetX, 0, "Should start at offset 0")
         codeTextView.swipeLeft()
+        var after = 0
+        waitUntil { after = self.scrollState(of: self.codeTextView).offsetX; return after > 0 }
+        XCTAssertGreaterThan(after, 0, "Swiping left must increase horizontal scroll offset when wrap is OFF")
+    }
+
+    // Swiping right after scrolling must decrease contentOffset.x back toward 0.
+    func testSwipeRightAfterLeftReducesOffset() {
+        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
+        wordWrapButton.tap()
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 0.5)
+
         codeTextView.swipeLeft()
+        var scrolledX = 0
+        waitUntil { scrolledX = self.scrollState(of: self.codeTextView).offsetX; return scrolledX > 0 }
+        guard scrolledX > 0 else { XCTFail("Could not scroll right first"); return }
+
         codeTextView.swipeRight()
-        XCTAssertTrue(codeTextView.exists)
+        var after = scrolledX
+        waitUntil { after = self.scrollState(of: self.codeTextView).offsetX; return after < scrolledX }
+        XCTAssertLessThan(after, scrolledX, "Swiping right must decrease horizontal offset")
     }
 
     func testScrollingAfterFontSizeChange() {
@@ -172,9 +357,12 @@ final class TextViewerScrollingTests: TextViewerTestBase {
             app.buttons["Larger Text"].tap()
         }
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 0.5)
+        let before = scrollState(of: codeTextView).offsetY
         codeTextView.swipeUp()
-        codeTextView.swipeDown()
-        XCTAssertTrue(codeTextView.exists)
+        var after = before
+        waitUntil { after = self.scrollState(of: self.codeTextView).offsetY; return after > before }
+        XCTAssertGreaterThan(after, before, "Swiping up after font size change must scroll vertically")
     }
 }
 
