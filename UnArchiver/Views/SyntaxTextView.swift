@@ -211,6 +211,10 @@ final class IndentGuideTextView: UITextView {
 
     override init(frame: CGRect, textContainer: NSTextContainer?) {
         super.init(frame: frame, textContainer: textContainer)
+        // Accessing layoutManager forces TextKit 1 (NSLayoutManager-based).
+        // TextKit 2 ignores textContainer.size for line breaking, so horizontal
+        // scroll (widthTracksTextView = false) only works under TextKit 1.
+        _ = self.layoutManager
         addSubview(guideOverlay)
         guideOverlay.textView = self
     }
