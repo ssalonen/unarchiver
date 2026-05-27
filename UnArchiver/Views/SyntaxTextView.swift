@@ -218,13 +218,31 @@ final class IndentGuideTextView: UITextView {
     required init?(coder: NSCoder) { fatalError() }
 
     override func layoutSubviews() {
-        super.layoutSubviews()
-        // Restore infinite container width after UITextView's own layout pass,
-        // which can silently reset the size when bounds change.
+        // Set BEFORE super so UITextView's layout engine sees the infinite container
+        // and doesn't wrap lines to the view's bounds width.
         if !textContainer.widthTracksTextView {
             textContainer.size = CGSize(
                 width: CGFloat.greatestFiniteMagnitude,
                 height: CGFloat.greatestFiniteMagnitude
+            )
+        }
+        super.layoutSubviews()
+        if !textContainer.widthTracksTextView {
+            // UITextView silently forces contentSize.width = bounds.width for
+            // vertical-scroll mode even with an infinite text container.
+            // Reapply the infinite size, re-run layout, then override contentSize.
+            textContainer.size = CGSize(
+                width: CGFloat.greatestFiniteMagnitude,
+                height: CGFloat.greatestFiniteMagnitude
+            )
+            layoutManager.ensureLayout(for: textContainer)
+            let used = layoutManager.usedRect(for: textContainer)
+            let insets = textContainerInset
+            let w = ceil(used.width + insets.left + insets.right)
+            let h = ceil(used.height + insets.top + insets.bottom)
+            contentSize = CGSize(
+                width: max(bounds.width, w),
+                height: max(bounds.height, h)
             )
         }
         guideOverlay.frame = bounds
