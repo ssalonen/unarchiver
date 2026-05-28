@@ -6,7 +6,7 @@ struct UnArchiverApp: App {
     @StateObject private var appState = AppState()
 
     private static let uitestArgs: Set<String> = [
-        "--uitesting", "--uitesting-json", "--uitesting-xml", "--uitesting-markdown"
+        "--uitesting", "--uitesting-json", "--uitesting-xml", "--uitesting-markdown", "--uitesting-lorem"
     ]
     private var isUITesting: Bool {
         !ProcessInfo.processInfo.arguments.filter { Self.uitestArgs.contains($0) }.isEmpty
@@ -48,17 +48,24 @@ private struct UITestRootView: View {
     }
 
     private static func testContent(for args: [String]) -> (String, String) {
-        if args.contains("--uitesting-json") { return (jsonContent, "json") }
-        if args.contains("--uitesting-xml")  { return (xmlContent,  "xml")  }
+        if args.contains("--uitesting-json")     { return (jsonContent,   "json") }
+        if args.contains("--uitesting-xml")      { return (xmlContent,    "xml")  }
         if args.contains("--uitesting-markdown") { return (markdownContent, "md") }
+        if args.contains("--uitesting-lorem")    { return (loremContent,  "txt")  }
         return (plainContent, "txt")
     }
 
-    // 30 lines × 200 chars — enough for vertical + horizontal scroll tests;
-    // kept small so the hex dump (~19 KB) doesn't block the main thread in tests.
-    private static let plainContent: String = (1...30).map { i in
+    // 100 lines × 200 chars — scrollable vertically even with word wrap OFF.
+    private static let plainContent: String = (1...100).map { i in
         String(format: "Line %03d: ", i) + String(repeating: "ABCDEFGHIJ", count: 19)
     }.joined(separator: "\n")
+
+    // 50 lines × ~450 chars — each line is wide enough to require horizontal scroll
+    // with word wrap OFF, and tall enough to require vertical scroll with wrap ON.
+    private static let loremContent: String = {
+        let line = "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur Excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum"
+        return (1...50).map { "Line \($0): \(line)" }.joined(separator: "\n")
+    }()
 
     private static let jsonContent = #"""
     {"users":[{"id":1,"name":"Alice","email":"alice@example.com","roles":["admin","user"]},{"id":2,"name":"Bob","email":"bob@example.com","roles":["user"]},{"id":3,"name":"Carol","email":"carol@example.com","roles":["moderator"]}],"total":3,"page":1,"pageSize":20}

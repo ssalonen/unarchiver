@@ -74,6 +74,7 @@ struct SyntaxTextView: UIViewRepresentable {
                 tv.textContainer.widthTracksTextView = true
                 tv.textContainer.lineBreakMode = .byWordWrapping
                 tv.showsHorizontalScrollIndicator = false
+                tv.contentOffset = CGPoint(x: 0, y: tv.contentOffset.y)
             } else {
                 tv.textContainer.widthTracksTextView = false
                 tv.textContainer.size = CGSize(
@@ -194,6 +195,12 @@ final class IndentGuideTextView: UITextView {
         didSet { guideOverlay.setNeedsDisplay() }
     }
 
+    // Exposes scroll geometry to XCUITest via .value without requiring VoiceOver.
+    override var accessibilityValue: String? {
+        get { "cw:\(Int(contentSize.width)),ch:\(Int(contentSize.height)),ox:\(Int(contentOffset.x)),oy:\(Int(contentOffset.y))" }
+        set { }
+    }
+
     private lazy var guideOverlay: IndentGuideOverlay = {
         let v = IndentGuideOverlay()
         v.backgroundColor = .clear
@@ -204,6 +211,10 @@ final class IndentGuideTextView: UITextView {
 
     override init(frame: CGRect, textContainer: NSTextContainer?) {
         super.init(frame: frame, textContainer: textContainer)
+        // Accessing layoutManager forces TextKit 1 (NSLayoutManager-based).
+        // TextKit 2 ignores textContainer.size for line breaking, so horizontal
+        // scroll (widthTracksTextView = false) only works under TextKit 1.
+        _ = self.layoutManager
         addSubview(guideOverlay)
         guideOverlay.textView = self
     }
@@ -211,13 +222,31 @@ final class IndentGuideTextView: UITextView {
     required init?(coder: NSCoder) { fatalError() }
 
     override func layoutSubviews() {
-        super.layoutSubviews()
-        // Restore infinite container width after UITextView's own layout pass,
-        // which can silently reset the size when bounds change.
+        // Set BEFORE super so UITextView's layout engine sees the infinite container
+        // and doesn't wrap lines to the view's bounds width.
         if !textContainer.widthTracksTextView {
             textContainer.size = CGSize(
                 width: CGFloat.greatestFiniteMagnitude,
                 height: CGFloat.greatestFiniteMagnitude
+            )
+        }
+        super.layoutSubviews()
+        if !textContainer.widthTracksTextView {
+            // UITextView silently forces contentSize.width = bounds.width for
+            // vertical-scroll mode even with an infinite text container.
+            // Reapply the infinite size, re-run layout, then override contentSize.
+            textContainer.size = CGSize(
+                width: CGFloat.greatestFiniteMagnitude,
+                height: CGFloat.greatestFiniteMagnitude
+            )
+            layoutManager.ensureLayout(for: textContainer)
+            let used = layoutManager.usedRect(for: textContainer)
+            let insets = textContainerInset
+            let w = ceil(used.width + insets.left + insets.right)
+            let h = ceil(used.height + insets.top + insets.bottom)
+            contentSize = CGSize(
+                width: max(bounds.width, w),
+                height: max(bounds.height, h)
             )
         }
         guideOverlay.frame = bounds
