@@ -193,7 +193,7 @@ final class TextViewerScrollingTests: TextViewerTestBase {
         let after = XCUIScreen.main.screenshot()
 
         XCTAssertNotEqual(
-            before.pngData(), after.pngData(),
+            before.pngRepresentation, after.pngRepresentation,
             "With word wrap off, swiping left must scroll content horizontally. " +
             "Identical screenshots indicate text is clipped to screen width instead of scrolling."
         )
