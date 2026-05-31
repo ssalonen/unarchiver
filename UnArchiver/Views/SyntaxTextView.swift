@@ -95,6 +95,13 @@ struct SyntaxTextView: UIViewRepresentable {
                 attributed = withWhitespaceMarkers(attributed)
             }
 
+            // NSAttributedString paragraph styles (from Highlightr or the plain fallback) carry
+            // lineBreakMode = .byWordWrapping, which overrides the text container setting and causes
+            // text to wrap even when widthTracksTextView is false. Patch every span when no-wrap.
+            if !wordWrap {
+                attributed = withNoWrapParagraphStyles(attributed)
+            }
+
             let result: NSAttributedString
             if !searchText.isEmpty {
                 result = withHighlightedMatches(in: attributed, query: searchText)
@@ -156,6 +163,22 @@ struct SyntaxTextView: UIViewRepresentable {
                 result.append(seg)
             }
             return result
+        }
+
+        private func withNoWrapParagraphStyles(_ source: NSAttributedString) -> NSAttributedString {
+            let mutable = NSMutableAttributedString(attributedString: source)
+            let fullRange = NSRange(location: 0, length: mutable.length)
+            mutable.enumerateAttribute(.paragraphStyle, in: fullRange, options: []) { val, range, _ in
+                let style: NSMutableParagraphStyle
+                if let existing = (val as? NSParagraphStyle)?.mutableCopy() as? NSMutableParagraphStyle {
+                    style = existing
+                } else {
+                    style = NSMutableParagraphStyle()
+                }
+                style.lineBreakMode = .byClipping
+                mutable.addAttribute(.paragraphStyle, value: style, range: range)
+            }
+            return mutable
         }
 
         private func withHighlightedMatches(
