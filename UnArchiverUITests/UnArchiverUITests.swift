@@ -176,6 +176,28 @@ final class TextViewerScrollingTests: TextViewerTestBase {
         codeTextView.swipeDown()
         XCTAssertTrue(codeTextView.exists)
     }
+
+    func testWordWrapOffScrollsHorizontallyForReal() {
+        // Lines are ~200 chars wide — with word wrap off, the content must extend
+        // beyond the screen width and be reachable by horizontal swiping.
+        // If text is clipped to screen width (bug), swiping left produces no visual
+        // change and the two screenshots will be identical → test fails.
+        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
+        wordWrapButton.tap()
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
+
+        let before = XCUIScreen.main.screenshot()
+        codeTextView.swipeLeft()
+        codeTextView.swipeLeft()
+        codeTextView.swipeLeft()
+        let after = XCUIScreen.main.screenshot()
+
+        XCTAssertNotEqual(
+            before.pngData(), after.pngData(),
+            "With word wrap off, swiping left must scroll content horizontally. " +
+            "Identical screenshots indicate text is clipped to screen width instead of scrolling."
+        )
+    }
 }
 
 // MARK: - Hex view
