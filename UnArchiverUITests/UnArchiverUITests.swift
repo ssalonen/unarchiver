@@ -364,6 +364,28 @@ final class TextViewerScrollingTests: TextViewerTestBase {
         waitUntil { after = self.scrollState(of: self.codeTextView).offsetY; return after > before }
         XCTAssertGreaterThan(after, before, "Swiping up after font size change must scroll vertically")
     }
+
+    func testWordWrapOffScrollsHorizontallyForReal() {
+        // Lines are ~200 chars wide — with word wrap off, the content must extend
+        // beyond the screen width and be reachable by horizontal swiping.
+        // If text is clipped to screen width (bug), swiping left produces no visual
+        // change and the two screenshots will be identical → test fails.
+        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
+        wordWrapButton.tap()
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
+
+        let before = XCUIScreen.main.screenshot()
+        codeTextView.swipeLeft()
+        codeTextView.swipeLeft()
+        codeTextView.swipeLeft()
+        let after = XCUIScreen.main.screenshot()
+
+        XCTAssertNotEqual(
+            before.pngRepresentation, after.pngRepresentation,
+            "With word wrap off, swiping left must scroll content horizontally. " +
+            "Identical screenshots indicate text is clipped to screen width instead of scrolling."
+        )
+    }
 }
 
 // MARK: - Hex view
@@ -634,6 +656,23 @@ final class TextViewerJSONTests: XCTestCase {
         codeTextView.swipeUp()
         codeTextView.swipeDown()
         XCTAssertTrue(codeTextView.exists)
+    }
+
+    func testAutoformatVisibleWhenWordWrapOff() {
+        // Autoformat must remain in the font menu after word wrap is disabled.
+        // With word wrap off, the text view gains horizontal scrolling but viewMode
+        // stays .text and language stays "json", so isFormattable remains true.
+        let wordWrapButton = app.buttons["wordWrapButton"]
+        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
+        wordWrapButton.tap()
+
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        XCTAssertTrue(
+            app.buttons["Autoformat"].waitForExistence(timeout: 3),
+            "Autoformat must appear in font menu when word wrap is off for JSON"
+        )
     }
 }
 
