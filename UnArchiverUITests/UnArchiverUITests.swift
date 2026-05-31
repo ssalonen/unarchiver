@@ -469,6 +469,23 @@ final class TextViewerJSONTests: XCTestCase {
         codeTextView.swipeDown()
         XCTAssertTrue(codeTextView.exists)
     }
+
+    func testAutoformatVisibleWhenWordWrapOff() {
+        // Autoformat must remain in the font menu after word wrap is disabled.
+        // With word wrap off, the text view gains horizontal scrolling but viewMode
+        // stays .text and language stays "json", so isFormattable remains true.
+        let wordWrapButton = app.buttons["wordWrapButton"]
+        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
+        wordWrapButton.tap()
+
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        XCTAssertTrue(
+            app.buttons["Autoformat"].waitForExistence(timeout: 3),
+            "Autoformat must appear in font menu when word wrap is off for JSON"
+        )
+    }
 }
 
 // MARK: - XML content

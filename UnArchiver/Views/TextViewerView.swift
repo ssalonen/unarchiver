@@ -128,11 +128,12 @@ struct TextViewerView: View {
                     Toggle("Whitespace Indicators", isOn: $showWhitespace)
                     Toggle("Indent Guides", isOn: $showIndentLines)
                 }
-                if isFormattable && viewMode == .text {
+                if isFormattable {
                     Divider()
                     Button { isAutoformatted.toggle() } label: {
                         Label("Autoformat", systemImage: "wand.and.sparkles")
                     }
+                    .disabled(viewMode != .text)
                 }
                 if isMarkdown {
                     Divider()
