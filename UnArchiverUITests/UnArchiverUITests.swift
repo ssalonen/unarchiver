@@ -10,6 +10,26 @@ private extension XCUIApplication {
     func waitForCodeTextView(timeout: TimeInterval = 10) -> Bool {
         codeTextView.waitForExistence(timeout: timeout)
     }
+
+    /// Finds a menu item by label regardless of element type. Toggle items in mixed
+    /// SwiftUI menus surface as buttons/menu-items rather than switches, so matching by
+    /// label is more reliable than `buttons[identifier]`.
+    func menuItem(label: String) -> XCUIElement {
+        descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", label))
+            .firstMatch
+    }
+
+    /// Word wrap now lives inside the options menu, so toggling it means opening the
+    /// menu and tapping the item (which dismisses the menu again).
+    func toggleWordWrap() {
+        let menu = buttons["fontSizeMenuButton"]
+        _ = menu.waitForExistence(timeout: 5)
+        menu.tap()
+        let item = menuItem(label: "Word Wrap")
+        _ = item.waitForExistence(timeout: 3)
+        item.tap()
+    }
 }
 
 // MARK: - Welcome screen
@@ -63,16 +83,15 @@ class TextViewerTestBase: XCTestCase {
     // MARK: Convenience element accessors
 
     var codeTextView: XCUIElement    { app.codeTextView }
-    var wordWrapButton: XCUIElement  { app.buttons["wordWrapButton"] }
+    /// Word wrap is a Toggle inside the options menu; match it by label.
+    var wordWrapButton: XCUIElement  { app.menuItem(label: "Word Wrap") }
     var hexToggleButton: XCUIElement { app.buttons["hexToggleButton"] }
     var fontSizeMenuButton: XCUIElement { app.buttons["fontSizeMenuButton"] }
 
     /// Finds a menu item by label regardless of element type (Toggle items in mixed
     /// menus render as buttons/menu-items rather than switches).
     func menuItem(label: String) -> XCUIElement {
-        app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label == %@", label))
-            .firstMatch
+        app.menuItem(label: label)
     }
 }
 
@@ -85,6 +104,8 @@ final class TextViewerLoadingTests: TextViewerTestBase {
     }
 
     func testWordWrapButtonIsPresent() {
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
         XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
     }
 
@@ -123,7 +144,6 @@ final class TextViewerWordWrapBehaviorTests: XCTestCase {
     override func tearDownWithError() throws { app = nil }
 
     private var textView: XCUIElement    { app.codeTextView }
-    private var wordWrapButton: XCUIElement { app.buttons["wordWrapButton"] }
 
     private struct ScrollState {
         let contentWidth: Int
@@ -171,8 +191,8 @@ final class TextViewerWordWrapBehaviorTests: XCTestCase {
 
     // Word wrap OFF: ~450-char lines must expand content far beyond the frame width.
     func testWordWrapOffExpandsContentWidth() {
-        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
-        wordWrapButton.tap()
+        XCTAssertTrue(textView.waitForExistence(timeout: 10))
+        app.toggleWordWrap()
         XCTAssertTrue(textView.waitForExistence(timeout: 5))
         let frameWidth = Int(textView.frame.width)
         var state: ScrollState?
@@ -186,8 +206,8 @@ final class TextViewerWordWrapBehaviorTests: XCTestCase {
 
     // Swiping left with word wrap OFF must actually advance contentOffset.x.
     func testHorizontalSwipeScrollsWhenWrapOff() {
-        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
-        wordWrapButton.tap()
+        XCTAssertTrue(textView.waitForExistence(timeout: 10))
+        app.toggleWordWrap()
         XCTAssertTrue(textView.waitForExistence(timeout: 5))
         Thread.sleep(forTimeInterval: 0.5)
 
@@ -229,12 +249,12 @@ final class TextViewerWordWrapBehaviorTests: XCTestCase {
         guard let initial = scrollState(of: textView) else { XCTFail("Initial state missing"); return }
         XCTAssertLessThanOrEqual(initial.contentWidth, frameWidth + 50, "Should start wrapped")
 
-        wordWrapButton.tap() // OFF
+        app.toggleWordWrap() // OFF
         var offState: ScrollState?
         waitUntil { offState = self.scrollState(of: self.textView); return (offState?.contentWidth ?? 0) > frameWidth * 3 }
         XCTAssertGreaterThan(offState?.contentWidth ?? 0, frameWidth * 3, "Wrap OFF must expand width")
 
-        wordWrapButton.tap() // ON again
+        app.toggleWordWrap() // ON again
         var onState: ScrollState?
         waitUntil { onState = self.scrollState(of: self.textView); return (onState?.contentWidth ?? 0) <= frameWidth + 50 }
         XCTAssertLessThanOrEqual(
@@ -245,15 +265,15 @@ final class TextViewerWordWrapBehaviorTests: XCTestCase {
 
     // After scrolling right with wrap OFF, re-enabling wrap must reset horizontal offset to 0.
     func testEnablingWrapResetsHorizontalOffset() {
-        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
-        wordWrapButton.tap() // OFF
+        XCTAssertTrue(textView.waitForExistence(timeout: 10))
+        app.toggleWordWrap() // OFF
         XCTAssertTrue(textView.waitForExistence(timeout: 5))
         Thread.sleep(forTimeInterval: 0.5)
 
         textView.swipeLeft()
         waitUntil { (self.scrollState(of: self.textView)?.offsetX ?? 0) > 0 }
 
-        wordWrapButton.tap() // ON
+        app.toggleWordWrap() // ON
         Thread.sleep(forTimeInterval: 0.5)
 
         guard let state = scrollState(of: textView) else { XCTFail("State missing"); return }
@@ -262,8 +282,8 @@ final class TextViewerWordWrapBehaviorTests: XCTestCase {
 
     // Rapid toggles must not crash.
     func testRapidWordWrapTogglesDoNotCrash() {
-        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
-        for _ in 0..<6 { wordWrapButton.tap() }
+        XCTAssertTrue(textView.waitForExistence(timeout: 10))
+        for _ in 0..<6 { app.toggleWordWrap() }
         XCTAssertTrue(textView.exists)
     }
 }
@@ -308,8 +328,8 @@ final class TextViewerScrollingTests: TextViewerTestBase {
 
     // Swiping up with word wrap OFF must increase contentOffset.y.
     func testVerticalSwipeScrollsWrapOff() {
-        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
-        wordWrapButton.tap()
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
+        app.toggleWordWrap()
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
         Thread.sleep(forTimeInterval: 0.5)
         let before = scrollState(of: codeTextView).offsetY
@@ -321,8 +341,8 @@ final class TextViewerScrollingTests: TextViewerTestBase {
 
     // Swiping left with word wrap OFF must increase contentOffset.x.
     func testHorizontalSwipeScrollsWrapOff() {
-        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
-        wordWrapButton.tap()
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
+        app.toggleWordWrap()
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
         Thread.sleep(forTimeInterval: 0.5)
         XCTAssertEqual(scrollState(of: codeTextView).offsetX, 0, "Should start at offset 0")
@@ -334,8 +354,8 @@ final class TextViewerScrollingTests: TextViewerTestBase {
 
     // Swiping right after scrolling must decrease contentOffset.x back toward 0.
     func testSwipeRightAfterLeftReducesOffset() {
-        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
-        wordWrapButton.tap()
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
+        app.toggleWordWrap()
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
         Thread.sleep(forTimeInterval: 0.5)
 
@@ -370,8 +390,8 @@ final class TextViewerScrollingTests: TextViewerTestBase {
         // beyond the screen width and be reachable by horizontal swiping.
         // If text is clipped to screen width (bug), swiping left produces no visual
         // change and the two screenshots will be identical → test fails.
-        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
-        wordWrapButton.tap()
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
+        app.toggleWordWrap()
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
 
         let before = XCUIScreen.main.screenshot()
@@ -405,7 +425,8 @@ final class TextViewerHexTests: TextViewerTestBase {
     func testWordWrapButtonHiddenInHexMode() {
         XCTAssertTrue(hexToggleButton.waitForExistence(timeout: 5))
         hexToggleButton.tap()
-        // Word wrap is not shown in hex mode
+        // Word wrap toggle only appears in the options menu in text mode
+        fontSizeMenuButton.tap()
         XCTAssertFalse(wordWrapButton.exists)
     }
 
@@ -423,6 +444,7 @@ final class TextViewerHexTests: TextViewerTestBase {
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
         hexToggleButton.tap() // → text
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
         XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
     }
 
@@ -627,21 +649,21 @@ final class TextViewerJSONTests: XCTestCase {
     func testAutoformatButtonVisibleForJSON() {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        XCTAssertTrue(app.buttons["Autoformat"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.menuItem(label: "Autoformat").waitForExistence(timeout: 3))
     }
 
     func testAutoformatJSONDoesNotCrash() {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        guard app.buttons["Autoformat"].waitForExistence(timeout: 3) else {
+        guard app.menuItem(label: "Autoformat").waitForExistence(timeout: 3) else {
             XCTFail("Autoformat button not found in menu")
             return
         }
-        app.buttons["Autoformat"].tap() // enable
+        app.menuItem(label: "Autoformat").tap() // enable
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        if app.buttons["Autoformat"].waitForExistence(timeout: 3) {
-            app.buttons["Autoformat"].tap() // disable
+        if app.menuItem(label: "Autoformat").waitForExistence(timeout: 3) {
+            app.menuItem(label: "Autoformat").tap() // disable
         }
         XCTAssertTrue(codeTextView.exists)
     }
@@ -649,8 +671,8 @@ final class TextViewerJSONTests: XCTestCase {
     func testScrollAfterAutoformat() {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        if app.buttons["Autoformat"].waitForExistence(timeout: 3) {
-            app.buttons["Autoformat"].tap()
+        if app.menuItem(label: "Autoformat").waitForExistence(timeout: 3) {
+            app.menuItem(label: "Autoformat").tap()
         }
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
         codeTextView.swipeUp()
@@ -662,16 +684,15 @@ final class TextViewerJSONTests: XCTestCase {
         // Autoformat must remain in the font menu after word wrap is disabled.
         // With word wrap off, the text view gains horizontal scrolling but viewMode
         // stays .text and language stays "json", so isFormattable remains true.
-        let wordWrapButton = app.buttons["wordWrapButton"]
-        XCTAssertTrue(wordWrapButton.waitForExistence(timeout: 5))
-        wordWrapButton.tap()
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
+        app.toggleWordWrap()
 
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
         XCTAssertTrue(
-            app.buttons["Autoformat"].waitForExistence(timeout: 3),
-            "Autoformat must appear in font menu when word wrap is off for JSON"
+            app.menuItem(label: "Autoformat").waitForExistence(timeout: 3),
+            "Autoformat must appear in options menu when word wrap is off for JSON"
         )
     }
 }
@@ -700,21 +721,21 @@ final class TextViewerXMLTests: XCTestCase {
     func testAutoformatButtonVisibleForXML() {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        XCTAssertTrue(app.buttons["Autoformat"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.menuItem(label: "Autoformat").waitForExistence(timeout: 3))
     }
 
     func testAutoformatXMLDoesNotCrash() {
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        guard app.buttons["Autoformat"].waitForExistence(timeout: 3) else {
+        guard app.menuItem(label: "Autoformat").waitForExistence(timeout: 3) else {
             XCTFail("Autoformat button not found in menu")
             return
         }
-        app.buttons["Autoformat"].tap()
+        app.menuItem(label: "Autoformat").tap()
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        if app.buttons["Autoformat"].waitForExistence(timeout: 3) {
-            app.buttons["Autoformat"].tap()
+        if app.menuItem(label: "Autoformat").waitForExistence(timeout: 3) {
+            app.menuItem(label: "Autoformat").tap()
         }
         XCTAssertTrue(codeTextView.exists)
     }
@@ -773,7 +794,7 @@ final class TextViewerMarkdownTests: XCTestCase {
         XCTAssertTrue(codeTextView.waitForExistence(timeout: 10))
         XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
         fontSizeMenuButton.tap()
-        XCTAssertFalse(app.buttons["Autoformat"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.menuItem(label: "Autoformat").waitForExistence(timeout: 2))
     }
 }
 
@@ -821,8 +842,8 @@ final class SnapshotTests: XCTestCase {
     func testSnapshotTextViewerWordWrapOff() {
         app.launchArguments = ["--uitesting"]
         app.launch()
-        XCTAssertTrue(app.buttons["wordWrapButton"].waitForExistence(timeout: 5))
-        app.buttons["wordWrapButton"].tap()
+        XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 10))
+        app.toggleWordWrap()
         XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 5))
         attach("text-viewer-word-wrap-off")
     }
@@ -849,7 +870,7 @@ final class SnapshotTests: XCTestCase {
         let menu = app.buttons["fontSizeMenuButton"]
         XCTAssertTrue(menu.waitForExistence(timeout: 5))
         menu.tap()
-        if app.buttons["Autoformat"].waitForExistence(timeout: 3) { app.buttons["Autoformat"].tap() }
+        if app.menuItem(label: "Autoformat").waitForExistence(timeout: 3) { app.menuItem(label: "Autoformat").tap() }
         XCTAssertTrue(app.codeTextView.waitForExistence(timeout: 5))
         attach("text-viewer-json-autoformatted")
     }
