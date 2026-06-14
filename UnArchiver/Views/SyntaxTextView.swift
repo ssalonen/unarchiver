@@ -167,18 +167,16 @@ struct SyntaxTextView: UIViewRepresentable {
         }
 
         private func withNoWrapParagraphStyles(_ source: NSAttributedString) -> NSAttributedString {
+            guard source.length > 0 else { return source }
+            // Apple docs: modifying the receiver inside enumerateAttribute causes undefined behavior.
+            // Just stamp .byClipping across the entire string in one shot instead.
             let mutable = NSMutableAttributedString(attributedString: source)
-            let fullRange = NSRange(location: 0, length: mutable.length)
-            mutable.enumerateAttribute(.paragraphStyle, in: fullRange, options: []) { val, range, _ in
-                let style: NSMutableParagraphStyle
-                if let existing = (val as? NSParagraphStyle)?.mutableCopy() as? NSMutableParagraphStyle {
-                    style = existing
-                } else {
-                    style = NSMutableParagraphStyle()
-                }
-                style.lineBreakMode = .byClipping
-                mutable.addAttribute(.paragraphStyle, value: style, range: range)
-            }
+            let noWrap = NSMutableParagraphStyle()
+            noWrap.lineBreakMode = .byClipping
+            mutable.addAttribute(
+                .paragraphStyle, value: noWrap,
+                range: NSRange(location: 0, length: mutable.length)
+            )
             return mutable
         }
 
@@ -264,6 +262,17 @@ final class IndentGuideTextView: UITextView {
             )
             layoutManager.ensureLayout(for: textContainer)
             let used = layoutManager.usedRect(for: textContainer)
+            let insets = textContainerInset
+            let w = ceil(used.width + insets.left + insets.right)
+            let h = ceil(used.height + insets.top + insets.bottom)
+            contentSize = CGSize(
+                width: max(bounds.width, w),
+                height: max(bounds.height, h)
+            )
+        }
+        guideOverlay.frame = bounds
+        guideOverlay.setNeedsDisplay()
+    }
             let insets = textContainerInset
             let w = ceil(used.width + insets.left + insets.right)
             let h = ceil(used.height + insets.top + insets.bottom)
