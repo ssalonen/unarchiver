@@ -96,17 +96,15 @@ struct TextViewerView: View {
             Button("Done") { dismiss() }
         }
         ToolbarItemGroup(placement: .navigationBarTrailing) {
-            if viewMode == .text {
-                Button { wordWrap.toggle() } label: {
-                    Image(systemName: wordWrap ? "arrow.left.and.right" : "text.alignleft")
-                }
-                .accessibilityIdentifier("wordWrapButton")
-            }
             if rawData != nil {
                 Button {
                     viewMode = viewMode == .hex ? .text : .hex
                 } label: {
-                    Image(systemName: viewMode == .hex ? "doc.text" : "hexagon")
+                    if viewMode == .hex {
+                        Image(systemName: "doc.text")
+                    } else {
+                        hexIcon
+                    }
                 }
                 .disabled(viewMode == .hex && !canShowText)
                 .accessibilityIdentifier("hexToggleButton")
@@ -125,15 +123,15 @@ struct TextViewerView: View {
                 }
                 if viewMode == .text {
                     Divider()
+                    Toggle("Word Wrap", isOn: $wordWrap)
+                        .accessibilityIdentifier("wordWrapButton")
                     Toggle("Whitespace Indicators", isOn: $showWhitespace)
                     Toggle("Indent Guides", isOn: $showIndentLines)
                 }
                 if isFormattable {
                     Divider()
-                    Button { isAutoformatted.toggle() } label: {
-                        Label("Autoformat", systemImage: "wand.and.sparkles")
-                    }
-                    .disabled(viewMode != .text)
+                    Toggle("Autoformat", isOn: $isAutoformatted)
+                        .disabled(viewMode != .text)
                 }
                 if isMarkdown {
                     Divider()
@@ -149,9 +147,18 @@ struct TextViewerView: View {
                     Label("Share", systemImage: "square.and.arrow.up")
                 }
             } label: {
-                Image(systemName: "textformat.size")
+                Image(systemName: "line.3.horizontal")
             }
             .accessibilityIdentifier("fontSizeMenuButton")
+        }
+    }
+
+    // Hexagon outline with "HEX" lettering inside, used to switch into hex mode.
+    private var hexIcon: some View {
+        ZStack {
+            Image(systemName: "hexagon")
+            Text("HEX")
+                .font(.system(size: 6, weight: .heavy))
         }
     }
 
