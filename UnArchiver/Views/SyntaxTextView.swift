@@ -273,17 +273,6 @@ final class IndentGuideTextView: UITextView {
         guideOverlay.frame = bounds
         guideOverlay.setNeedsDisplay()
     }
-            let insets = textContainerInset
-            let w = ceil(used.width + insets.left + insets.right)
-            let h = ceil(used.height + insets.top + insets.bottom)
-            contentSize = CGSize(
-                width: max(bounds.width, w),
-                height: max(bounds.height, h)
-            )
-        }
-        guideOverlay.frame = bounds
-        guideOverlay.setNeedsDisplay()
-    }
 }
 
 // MARK: - IndentGuideOverlay
