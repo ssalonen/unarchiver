@@ -127,13 +127,10 @@ struct TextViewerView: View {
                         .accessibilityIdentifier("wordWrapButton")
                     Toggle("Whitespace Indicators", isOn: $showWhitespace)
                     Toggle("Indent Guides", isOn: $showIndentLines)
-                }
-                if isFormattable {
-                    Divider()
-                    Button { isAutoformatted.toggle() } label: {
-                        Label("Autoformat", systemImage: "wand.and.sparkles")
+                    if isFormattable {
+                        Toggle("Autoformat", isOn: $isAutoformatted)
+                            .accessibilityIdentifier("autoformatButton")
                     }
-                    .disabled(viewMode != .text)
                 }
                 if isMarkdown {
                     Divider()
