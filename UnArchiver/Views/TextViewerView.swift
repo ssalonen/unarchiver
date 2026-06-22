@@ -130,8 +130,10 @@ struct TextViewerView: View {
                 }
                 if isFormattable {
                     Divider()
-                    Toggle("Autoformat", isOn: $isAutoformatted)
-                        .disabled(viewMode != .text)
+                    Button { isAutoformatted.toggle() } label: {
+                        Label("Autoformat", systemImage: "wand.and.sparkles")
+                    }
+                    .disabled(viewMode != .text)
                 }
                 if isMarkdown {
                     Divider()

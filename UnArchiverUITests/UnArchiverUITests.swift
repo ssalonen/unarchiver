@@ -680,6 +680,31 @@ final class TextViewerJSONTests: XCTestCase {
         XCTAssertTrue(codeTextView.exists)
     }
 
+    func testAutoformatMenuItemShowsCheckedState() {
+        // The Autoformat control must indicate whether formatting is enabled by
+        // showing a checkmark (selected state) in the menu — not act as a
+        // stateless one-shot button. A plain Button never reports `isSelected`,
+        // so this test fails for a button and passes for a checkbox-style Toggle.
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+
+        // Before enabling, the item must be present and unchecked.
+        fontSizeMenuButton.tap()
+        let item = app.menuItem(label: "Autoformat")
+        XCTAssertTrue(item.waitForExistence(timeout: 3))
+        XCTAssertFalse(item.isSelected, "Autoformat should start unchecked")
+        item.tap() // enable (tapping a menu item dismisses the menu)
+
+        // Reopen the menu: the item must now be checked.
+        XCTAssertTrue(codeTextView.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        let enabledItem = app.menuItem(label: "Autoformat")
+        XCTAssertTrue(enabledItem.waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            enabledItem.isSelected,
+            "Autoformat must show a checkmark once formatting is enabled"
+        )
+    }
+
     func testAutoformatVisibleWhenWordWrapOff() {
         // Autoformat must remain in the font menu after word wrap is disabled.
         // With word wrap off, the text view gains horizontal scrolling but viewMode
