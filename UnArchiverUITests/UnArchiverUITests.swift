@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 // MARK: - Shared helpers
 
@@ -285,6 +286,163 @@ final class TextViewerWordWrapBehaviorTests: XCTestCase {
         XCTAssertTrue(textView.waitForExistence(timeout: 10))
         for _ in 0..<6 { app.toggleWordWrap() }
         XCTAssertTrue(textView.exists)
+    }
+}
+
+// MARK: - Word-wrap toggle clipping tests
+//
+// Reproduces the reported bug: after toggling word wrap (any file type) the view
+// shows only blank whitespace when scrolled right. The existing tests miss it
+// because apply() force-resets contentOffset.x to 0 right after a toggle, so a
+// check done immediately after toggling looks fine — but the inflated
+// contentSize.width from the no-wrap layout survives, leaving horizontal scroll
+// room over an empty region. The trigger is: scroll right while wrapped OFF, then
+// toggle back ON, then try to scroll again. These tests do exactly that and assert
+// the view still shows text (ink), not whitespace.
+
+final class TextViewerWrapToggleClippingTests: XCTestCase {
+    private var app: XCUIApplication!
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        // The actual reported repro: a short Markdown doc (heading + two very long
+        // paragraph lines). Markdown is syntax-highlighted, unlike the plain lorem
+        // fixture — that highlighting is what makes the wrap toggle leave stale-wide
+        // content. See mdLongContent in UnArchiverApp.
+        app.launchArguments = ["--uitesting-mdlong"]
+        app.launch()
+    }
+
+    override func tearDownWithError() throws { app = nil }
+
+    private var textView: XCUIElement { app.codeTextView }
+
+    private struct ScrollState {
+        let contentWidth: Int
+        let offsetX: Int
+    }
+
+    private func scrollState(of el: XCUIElement) -> ScrollState? {
+        guard let raw = el.value as? String else { return nil }
+        var d = [String: Int]()
+        for pair in raw.split(separator: ",") {
+            let kv = pair.split(separator: ":")
+            guard kv.count == 2, let v = Int(kv[1]) else { continue }
+            d[String(kv[0])] = v
+        }
+        guard let cw = d["cw"], let ox = d["ox"] else { return nil }
+        return ScrollState(contentWidth: cw, offsetX: ox)
+    }
+
+    private func waitUntil(timeout: TimeInterval = 3, condition: () -> Bool) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+    }
+
+    /// Fraction of pixels in the element's screenshot that differ noticeably from the
+    /// top-left (background) pixel. ~0 means a uniform / blank region; text adds "ink".
+    private func inkFraction(of element: XCUIElement) -> Double {
+        guard let cg = element.screenshot().image.cgImage else { return 0 }
+        let w = cg.width, h = cg.height
+        guard w > 0, h > 0 else { return 0 }
+        let bytesPerPixel = 4
+        let bytesPerRow = bytesPerPixel * w
+        var pixels = [UInt8](repeating: 0, count: h * bytesPerRow)
+        guard let ctx = CGContext(
+            data: &pixels, width: w, height: h, bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return 0 }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+        // Background = corner pixel (the 12pt text container inset guarantees the
+        // very corner is empty regardless of light/dark theme).
+        let bgR = Int(pixels[0]), bgG = Int(pixels[1]), bgB = Int(pixels[2])
+        var ink = 0
+        var i = 0
+        while i < pixels.count {
+            let dr = abs(Int(pixels[i])     - bgR)
+            let dg = abs(Int(pixels[i + 1]) - bgG)
+            let db = abs(Int(pixels[i + 2]) - bgB)
+            if dr + dg + db > 60 { ink += 1 }
+            i += bytesPerPixel
+        }
+        return Double(ink) / Double(w * h)
+    }
+
+    /// Drives the exact repro: wrap ON → wrap OFF → scroll right → wrap ON.
+    /// Asserts each precondition so the test can NEVER pass vacuously: if the menu
+    /// toggle or the swipe silently fails to take effect, these fire instead of the
+    /// later assertions trivially succeeding.
+    private func scrollRightThenReenableWrap() {
+        XCTAssertTrue(textView.waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 0.5)
+        let frameWidth = Int(textView.frame.width)
+
+        app.toggleWordWrap() // OFF — content width inflates to full line width
+        var offWidth = 0
+        waitUntil { offWidth = self.scrollState(of: self.textView)?.contentWidth ?? 0; return offWidth > frameWidth * 3 }
+        XCTAssertGreaterThan(
+            offWidth, frameWidth * 3,
+            "PRECONDITION: turning word wrap OFF must widen the content (got contentWidth " +
+            "\(offWidth) vs frame \(frameWidth)). If this fails the wrap toggle never took " +
+            "effect and the rest of the test would pass vacuously."
+        )
+
+        textView.swipeLeft() // scroll right into the now-wide content
+        textView.swipeLeft()
+        var scrolledX = 0
+        waitUntil { scrolledX = self.scrollState(of: self.textView)?.offsetX ?? 0; return scrolledX > 0 }
+        XCTAssertGreaterThan(
+            scrolledX, 0,
+            "PRECONDITION: must actually scroll right (offsetX > 0) while word wrap is OFF; " +
+            "got \(scrolledX). Without this the re-enable step proves nothing."
+        )
+
+        app.toggleWordWrap() // ON again
+        Thread.sleep(forTimeInterval: 0.6)
+    }
+
+    // After re-enabling wrap, the content must be re-constrained to the view width
+    // so there is no blank horizontal region to scroll into.
+    func testReenablingWrapRemovesHorizontalScrollRoom() {
+        scrollRightThenReenableWrap()
+        guard let state = scrollState(of: textView) else { XCTFail("State missing"); return }
+        let frameWidth = Int(textView.frame.width)
+        XCTAssertLessThanOrEqual(
+            state.contentWidth, frameWidth + 50,
+            "After scrolling right then re-enabling word wrap, content width " +
+            "\(state.contentWidth) still exceeds frame \(frameWidth): the view keeps " +
+            "blank horizontal scroll room (the clipping bug)."
+        )
+    }
+
+    // The user's exact symptom: after the toggle, swiping to scroll right must keep
+    // text on screen, not slide it away to reveal blank whitespace.
+    func testScrollRightAfterReenablingWrapShowsText() {
+        scrollRightThenReenableWrap()
+
+        XCTAssertGreaterThan(inkFraction(of: textView), 0.02, "Sanity: text visible after re-enabling wrap")
+
+        textView.swipeLeft()
+        textView.swipeLeft()
+        textView.swipeLeft()
+        Thread.sleep(forTimeInterval: 0.5)
+
+        XCTAssertEqual(
+            scrollState(of: textView)?.offsetX, 0,
+            "Word wrap ON: must not scroll horizontally into blank space after a toggle"
+        )
+        let after = inkFraction(of: textView)
+        XCTAssertGreaterThan(
+            after, 0.02,
+            "After toggling word wrap and scrolling right the view is blank (ink=\(after)) — " +
+            "only whitespace shows. The word-wrap clipping bug."
+        )
     }
 }
 

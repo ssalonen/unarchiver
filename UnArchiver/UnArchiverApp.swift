@@ -6,7 +6,8 @@ struct UnArchiverApp: App {
     @StateObject private var appState = AppState()
 
     private static let uitestArgs: Set<String> = [
-        "--uitesting", "--uitesting-json", "--uitesting-xml", "--uitesting-markdown", "--uitesting-lorem"
+        "--uitesting", "--uitesting-json", "--uitesting-xml", "--uitesting-markdown",
+        "--uitesting-lorem", "--uitesting-mdlong"
     ]
     private var isUITesting: Bool {
         !ProcessInfo.processInfo.arguments.filter { Self.uitestArgs.contains($0) }.isEmpty
@@ -52,6 +53,7 @@ private struct UITestRootView: View {
         if args.contains("--uitesting-xml")      { return (xmlContent,    "xml")  }
         if args.contains("--uitesting-markdown") { return (markdownContent, "md") }
         if args.contains("--uitesting-lorem")    { return (loremContent,  "txt")  }
+        if args.contains("--uitesting-mdlong")   { return (mdLongContent, "md")   }
         return (plainContent, "txt")
     }
 
@@ -65,6 +67,17 @@ private struct UITestRootView: View {
     private static let loremContent: String = {
         let line = "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur Excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum"
         return (1...50).map { "Line \($0): \(line)" }.joined(separator: "\n")
+    }()
+
+    // The actual reported repro: a short Markdown document (a heading + two very long
+    // paragraph lines). Crucially this is Markdown, so it is syntax-highlighted via
+    // Highlightr, unlike the plain-text lorem fixture. The long paragraphs make the
+    // content very wide with word wrap OFF; after toggling wrap back ON the highlighted
+    // attributed string's contentSize.width could stay stale-wide, leaving blank
+    // horizontal scroll room — the clipping bug.
+    private static let mdLongContent: String = {
+        let para = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec hendrerit tellus vitae mauris tristique efficitur. Phasellus sollicitudin eros dui, a posuere urna convallis eu. Nunc et dui metus. Suspendisse vitae turpis malesuada lacus eleifend condimentum a venenatis libero. In tempor mi non urna ultrices suscipit. Maecenas id maximus mi, vel dictum massa. Proin nec libero lacinia, posuere mi at, varius nisl. Duis quis libero purus. Donec rutrum vehicula lorem ut convallis. Morbi tempor semper dui. Etiam egestas ex sed diam vulputate molestie. Aenean dui nunc, elementum at ante id, faucibus pretium enim. In aliquet nunc dui, sed blandit mi pellentesque."
+        return "# Ff\n\(para)\n\(para)"
     }()
 
     private static let jsonContent = #"""
