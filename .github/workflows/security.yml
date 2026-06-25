@@ -25,6 +25,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # Install XcodeGen and generate the project BEFORE initializing CodeQL.
+      # CodeQL's init injects a build tracer via DYLD_INSERT_LIBRARIES, which
+      # makes Homebrew detect itself as running under Rosetta 2 and refuse to
+      # install into the ARM prefix (/opt/homebrew). Running brew here keeps it
+      # in a normal, untraced environment. Project generation doesn't need to
+      # be traced — only the Swift build below does.
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
@@ -34,12 +46,6 @@ jobs:
 
       - name: Select Xcode
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
-
-      - name: Install XcodeGen
-        run: brew install xcodegen
-
-      - name: Generate Xcode project
-        run: xcodegen generate
 
       - name: Cache SPM packages
         id: spm-cache
