@@ -57,6 +57,8 @@ struct TextViewerView: View {
 
     @AppStorage("showWhitespaceIndicators") private var showWhitespace = false
     @AppStorage("showIndentGuides") private var showIndentLines = false
+    // DIAGNOSTIC: live geometry overlay for the word-wrap clipping bug. Remove later.
+    @AppStorage("debugLayoutOverlay") private var showDebugOverlay = false
 
     private var canShowText: Bool { decodedText != nil }
 
@@ -127,6 +129,8 @@ struct TextViewerView: View {
                         .accessibilityIdentifier("wordWrapButton")
                     Toggle("Whitespace Indicators", isOn: $showWhitespace)
                     Toggle("Indent Guides", isOn: $showIndentLines)
+                    Toggle("Layout Debug", isOn: $showDebugOverlay)
+                        .accessibilityIdentifier("layoutDebugButton")
                     if isFormattable {
                         Toggle("Autoformat", isOn: $isAutoformatted)
                             .accessibilityIdentifier("autoformatButton")
@@ -290,7 +294,8 @@ struct TextViewerView: View {
             searchText: searchText,
             wordWrap: wordWrap,
             showWhitespace: showWhitespace,
-            showIndentLines: showIndentLines
+            showIndentLines: showIndentLines,
+            showDebugOverlay: showDebugOverlay
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

@@ -10,6 +10,7 @@ struct SyntaxTextView: UIViewRepresentable {
     let wordWrap: Bool
     let showWhitespace: Bool
     let showIndentLines: Bool
+    var showDebugOverlay: Bool = false
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -33,6 +34,7 @@ struct SyntaxTextView: UIViewRepresentable {
     }
 
     func updateUIView(_ tv: IndentGuideTextView, context: Context) {
+        tv.debugOverlayEnabled = showDebugOverlay
         context.coordinator.apply(
             to: tv,
             code: code,
@@ -216,6 +218,62 @@ final class IndentGuideTextView: UITextView {
         didSet { guideOverlay.setNeedsDisplay() }
     }
 
+    // DIAGNOSTIC: live geometry readout. Toggle from the options menu ("Layout Debug").
+    // Used to capture on-device values for the word-wrap clipping bug, which does not
+    // reproduce on the simulator. Remove once the cause is confirmed.
+    var debugOverlayEnabled = false {
+        didSet {
+            debugLabel.isHidden = !debugOverlayEnabled
+            if debugOverlayEnabled { updateDebugLabel() }
+        }
+    }
+
+    // Update the debug readout on every scroll, not just on relayout.
+    override var contentOffset: CGPoint {
+        didSet { if debugOverlayEnabled { updateDebugLabel() } }
+    }
+
+    private lazy var debugLabel: UILabel = {
+        let l = UILabel()
+        l.numberOfLines = 0
+        l.font = .monospacedSystemFont(ofSize: 11, weight: .semibold)
+        l.textColor = .white
+        l.backgroundColor = UIColor.systemRed.withAlphaComponent(0.85)
+        l.isUserInteractionEnabled = false
+        l.isHidden = true
+        l.layer.cornerRadius = 4
+        l.clipsToBounds = true
+        return l
+    }()
+
+    private func updateDebugLabel() {
+        let wrap = textContainer.widthTracksTextView
+        let lbm: String
+        switch textContainer.lineBreakMode {
+        case .byWordWrapping: lbm = "word"
+        case .byCharWrapping: lbm = "char"
+        case .byClipping:     lbm = "clip"
+        case .byTruncatingTail: lbm = "trunc"
+        default: lbm = "\(textContainer.lineBreakMode.rawValue)"
+        }
+        let overflow = contentSize.width > bounds.width + 1 ? "  ⚠️ WIDE" : ""
+        debugLabel.text = [
+            "bounds   \(Int(bounds.width))×\(Int(bounds.height))",
+            "content  \(Int(contentSize.width))×\(Int(contentSize.height))\(overflow)",
+            "containr \(Int(textContainer.size.width))×\(Int(textContainer.size.height))",
+            "offset   \(Int(contentOffset.x)),\(Int(contentOffset.y))",
+            "wrap=\(wrap)  lbm=\(lbm)  pad=\(Int(textContainer.lineFragmentPadding))"
+        ].joined(separator: "\n")
+        debugLabel.sizeToFit()
+        // Pin to the top-left of the visible viewport (bounds.origin == contentOffset).
+        debugLabel.frame = CGRect(
+            x: bounds.minX + 4, y: bounds.minY + 4,
+            width: debugLabel.bounds.width + 8, height: debugLabel.bounds.height + 6
+        )
+        debugLabel.textAlignment = .left
+        bringSubviewToFront(debugLabel)
+    }
+
     // Exposes scroll geometry to XCUITest via .value without requiring VoiceOver.
     override var accessibilityValue: String? {
         get { "cw:\(Int(contentSize.width)),ch:\(Int(contentSize.height)),ox:\(Int(contentOffset.x)),oy:\(Int(contentOffset.y))" }
@@ -238,6 +296,7 @@ final class IndentGuideTextView: UITextView {
         _ = self.layoutManager
         addSubview(guideOverlay)
         guideOverlay.textView = self
+        addSubview(debugLabel)
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -272,6 +331,7 @@ final class IndentGuideTextView: UITextView {
         }
         guideOverlay.frame = bounds
         guideOverlay.setNeedsDisplay()
+        if debugOverlayEnabled { updateDebugLabel() }
     }
 }
 
