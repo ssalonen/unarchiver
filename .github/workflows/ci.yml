@@ -25,11 +25,17 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
 
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
       - name: Cache SPM packages
         uses: actions/cache@v5
         with:
           path: SourcePackages
-          key: ${{ runner.os }}-spm-${{ hashFiles('UnArchiver.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved') }}
           restore-keys: ${{ runner.os }}-spm-
 
       - name: Resolve Swift packages
@@ -61,7 +67,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .build/DerivedDataWW
-          key: ${{ runner.os }}-dd-ww-${{ hashFiles('UnArchiver/**/*.swift', 'UnArchiver.xcodeproj/project.pbxproj', 'UnArchiver.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: ${{ runner.os }}-dd-ww-${{ hashFiles('UnArchiver/**/*.swift', 'project.yml', 'Package.resolved') }}
           restore-keys: ${{ runner.os }}-dd-ww-
 
       - name: Build for testing
@@ -110,6 +116,12 @@ jobs:
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
           xcodebuild -version
 
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
       - name: List schemes
         run: xcodebuild -list -project UnArchiver.xcodeproj
 
@@ -118,7 +130,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: SourcePackages
-          key: ${{ runner.os }}-spm-${{ hashFiles('UnArchiver.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
 

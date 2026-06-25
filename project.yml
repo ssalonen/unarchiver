@@ -1,0 +1,169 @@
+name: UnArchiver
+
+# This file is the single source of truth for the Xcode project.
+# UnArchiver.xcodeproj is generated from it by XcodeGen and is NOT committed:
+#
+#   brew install xcodegen   # once
+#   xcodegen generate       # regenerate UnArchiver.xcodeproj after editing this file
+#
+options:
+  bundleIdPrefix: com.yourcompany
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+
+# Swift Package Manager dependencies. Keep in sync with Package.swift
+# (the Security workflow's supply-chain job verifies they match).
+packages:
+  SWCompression:
+    url: https://github.com/tsolomko/SWCompression
+    from: 4.8.0
+  Highlightr:
+    url: https://github.com/raspu/Highlightr
+    from: 2.2.0
+  swift-snapshot-testing:
+    url: https://github.com/pointfreeco/swift-snapshot-testing
+    from: 1.19.2
+
+targets:
+  UnArchiver:
+    type: application
+    platform: iOS
+    sources:
+      - path: UnArchiver
+        excludes:
+          - "**/*.orig"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.unarchiver
+        INFOPLIST_FILE: UnArchiver/Info.plist
+        CODE_SIGN_ENTITLEMENTS: UnArchiver/UnArchiver.entitlements
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SWIFT_OBJC_BRIDGING_HEADER: UnArchiver/UnArchiver-Bridging-Header.h
+        SWIFT_EMIT_LOC_STRINGS: YES
+        MARKETING_VERSION: "1.2"
+        CURRENT_PROJECT_VERSION: 1
+        TARGETED_DEVICE_FAMILY: "1,2"
+        LD_RUNPATH_SEARCH_PATHS:
+          - $(inherited)
+          - "@executable_path/Frameworks"
+    dependencies:
+      - package: SWCompression
+      - package: Highlightr
+      - sdk: libz.tbd
+      - sdk: libbz2.tbd
+      - target: ShareExtension
+        embed: true
+
+  ShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShareExtension
+        excludes:
+          - "**/*.orig"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.unarchiver.shareextension
+        INFOPLIST_FILE: ShareExtension/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ShareExtension/ShareExtension.entitlements
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+        MARKETING_VERSION: "1.2"
+        CURRENT_PROJECT_VERSION: 1
+        TARGETED_DEVICE_FAMILY: "1,2"
+        LD_RUNPATH_SEARCH_PATHS:
+          - $(inherited)
+          - "@executable_path/Frameworks"
+          - "@executable_path/../../Frameworks"
+
+  UnArchiverTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: UnArchiverTests
+    dependencies:
+      - target: UnArchiver
+        link: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.unarchiver.tests
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/UnArchiver.app/UnArchiver"
+
+  UnArchiverUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UnArchiverUITests
+    dependencies:
+      - target: UnArchiver
+        link: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.unarchiver.uitests
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        TEST_TARGET_NAME: UnArchiver
+
+schemes:
+  UnArchiver:
+    build:
+      targets:
+        UnArchiver: all
+        UnArchiverUITests: [test]
+        UnArchiverTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - UnArchiverUITests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  UnArchiverUnitTests:
+    build:
+      targets:
+        UnArchiverTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - UnArchiverTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  ShareExtension:
+    build:
+      targets:
+        ShareExtension: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
