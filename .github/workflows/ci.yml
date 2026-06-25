@@ -344,3 +344,130 @@ jobs:
           name: coverage-report
           path: coverage.json
           if-no-files-found: ignore
+
+  # ── Auto-release on green main ─────────────────────────────────────────────
+  # Runs only after BOTH test jobs pass on a push to main (the `needs` gate is
+  # what makes this fire exclusively on a "green" commit). It computes the next
+  # semantic version from Conventional Commits made since the last release tag:
+  #
+  #   feat: / feat(scope):        → minor bump
+  #   fix: / perf:                → patch bump
+  #   feat!: / BREAKING CHANGE:   → major bump
+  #   chore/docs/test/ci/etc only → NO release
+  #
+  # Skipping releases for non-functional commits keeps version numbers
+  # meaningful and self-defuses the loop: the release workflow's own
+  # "chore: update AltStore source" commit is non-releasable, so it can never
+  # trigger another release.
+  compute-version:
+    name: Compute release version
+    needs: [build, word-wrap]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      should_release: ${{ steps.semver.outputs.should_release }}
+      new_tag: ${{ steps.semver.outputs.new_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # full history + tags needed to find the last release
+
+      - name: Compute next version from Conventional Commits
+        id: semver
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, re, subprocess
+
+          def sh(*args):
+              return subprocess.run(args, capture_output=True, text=True).stdout.strip()
+
+          semver_re = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)$')
+
+          def parse(v):
+              m = semver_re.match(v or "")
+              return tuple(int(x) for x in m.groups()) if m else (0, 0, 0)
+
+          # Highest semver git tag, e.g. v3.1.4
+          tags = sh("git", "tag", "--sort=-v:refname").splitlines()
+          semver_tags = [t for t in tags if re.match(r'^v\d+\.\d+\.\d+$', t)]
+          latest_tag = semver_tags[0] if semver_tags else None
+
+          # Base version = max(latest tag, version already published in the
+          # AltStore source). The source floor defends against tags missing
+          # from the clone so the version can only ever move forward.
+          base = parse(latest_tag)
+          try:
+              with open("altstore-source.json") as f:
+                  src_ver = json.load(f)["apps"][0].get("version", "0.0.0")
+              base = max(base, parse(src_ver))
+          except Exception as e:
+              print("Could not read source version:", e)
+
+          # Commits to classify: since the last tag (whole history if none).
+          rng = f"{latest_tag}..HEAD" if latest_tag else "HEAD"
+          log = sh("git", "log", rng, "--pretty=format:%s%x1f%b%x1e")
+          entries = [e for e in log.split("\x1e") if e.strip()]
+
+          rank = {"patch": 1, "minor": 2, "major": 3}
+          feat_re = re.compile(r'^feat(\(.+?\))?:', re.I)
+          fix_re = re.compile(r'^(fix|perf)(\(.+?\))?:', re.I)
+          breaking_re = re.compile(r'^\w+(\(.+?\))?!:')
+
+          chosen = None
+          for e in entries:
+              subject, _, body = e.partition("\x1f")
+              # git separates log entries with a newline, so each subject after
+              # the first arrives with a leading "\n" — strip it before matching.
+              subject = subject.strip()
+              if "BREAKING CHANGE" in (subject + "\n" + body) or breaking_re.match(subject):
+                  level = "major"
+              elif feat_re.match(subject):
+                  level = "minor"
+              elif fix_re.match(subject):
+                  level = "patch"
+              else:
+                  continue
+              if chosen is None or rank[level] > rank[chosen]:
+                  chosen = level
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              if chosen is None:
+                  out.write("should_release=false\n")
+                  print(f"No releasable commits since {latest_tag or '(start)'} — skipping release")
+              else:
+                  M, m, p = base
+                  if chosen == "major":
+                      M, m, p = M + 1, 0, 0
+                  elif chosen == "minor":
+                      m, p = m + 1, 0
+                  else:
+                      p += 1
+                  new_tag = f"v{M}.{m}.{p}"
+                  out.write("should_release=true\n")
+                  out.write(f"new_tag={new_tag}\n")
+                  print(f"{chosen} bump from base v{base[0]}.{base[1]}.{base[2]} -> {new_tag}")
+          PYEOF
+
+      - name: Push tag
+        if: steps.semver.outputs.should_release == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.semver.outputs.new_tag }}"
+          git push origin "${{ steps.semver.outputs.new_tag }}"
+
+  # Reuses the existing build/publish pipeline. Invoked via workflow_call (not
+  # the tag-push trigger) because pushes made with GITHUB_TOKEN do not start new
+  # workflow runs — so this is the only path that fires, and never twice.
+  release:
+    name: Build & release
+    needs: compute-version
+    if: needs.compute-version.outputs.should_release == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.compute-version.outputs.new_tag }}
+    permissions:
+      contents: write

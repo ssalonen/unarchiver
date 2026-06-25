@@ -39,11 +39,31 @@ open UnArchiver.xcodeproj
 
 Xcode will resolve the [SWCompression](https://github.com/tsolomko/SWCompression) package automatically.
 
-## Release a new version
+## Releases
+
+Releases are **automatic**. Every push to `main` that passes CI is analysed for
+[Conventional Commits](https://www.conventionalcommits.org/) since the last
+release, and the version is bumped accordingly:
+
+| Commit prefix (since last release) | Result |
+|---|---|
+| `feat:` / `feat(scope):` | minor bump (e.g. `3.1.4` → `3.2.0`) |
+| `fix:` / `perf:` | patch bump (e.g. `3.1.4` → `3.1.5`) |
+| `feat!:` or `BREAKING CHANGE:` in the body | major bump (e.g. `3.1.4` → `4.0.0`) |
+| only `chore:` / `docs:` / `test:` / `ci:` / etc. | **no release** |
+
+When a release is cut, GitHub Actions builds an unsigned IPA, creates a GitHub
+Release, and updates `altstore-source.json` — so SideStore/AltStore pick it up
+automatically. Trivial commits never cut a release, which keeps version numbers
+meaningful and avoids unnecessary macOS build minutes.
+
+### Manual / forced release
+
+To force a specific bump regardless of commit messages, run the **“Bump version
+and make a release”** workflow from the Actions tab (choose patch/minor/major),
+or push a tag directly:
 
 ```bash
-git tag v1.1
-git push origin v1.1
+git tag v4.0.0
+git push origin v4.0.0
 ```
-
-GitHub Actions builds an unsigned IPA, creates a release, and updates `altstore-source.json` automatically.

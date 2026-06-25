@@ -167,7 +167,10 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to altstore-source.json"
           else
-            git commit -m "chore: update AltStore source for ${TAG}"
+            # [skip ci] keeps this bot commit from starting a CI run. A run
+            # would be harmless anyway (a lone chore commit is non-releasable,
+            # so compute-version would skip), but skipping saves macOS minutes.
+            git commit -m "chore: update AltStore source for ${TAG} [skip ci]"
             git push origin HEAD:main
           fi
 
