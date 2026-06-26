@@ -82,6 +82,7 @@ struct MarkdownWebView: UIViewRepresentable {
                 a { color: #007aff; }
                 ul, ol { padding-left: 1.5em; }
                 li { margin: 0.25em 0; }
+                li input[type="checkbox"] { margin-right: 0.4em; vertical-align: middle; }
                 hr { border: none; border-top: 1px solid #ccc; margin: 1em 0; }
                 table { border-collapse: collapse; width: 100%; margin: 1em 0; }
                 th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
@@ -121,6 +122,8 @@ struct MarkdownWebView: UIViewRepresentable {
         result = result.replacingOccurrences(of: "(?m)^> (.+)$", with: "<blockquote>$1</blockquote>", options: .regularExpression)
 
         result = result.replacingOccurrences(of: "(?m)^\\* (.+)$", with: "<li>$1</li>", options: .regularExpression)
+        result = result.replacingOccurrences(of: "(?m)^- \\[x\\] (.+)$", with: "<li><input type=\"checkbox\" disabled checked> $1</li>", options: [.regularExpression, .caseInsensitive])
+        result = result.replacingOccurrences(of: "(?m)^- \\[ \\] (.+)$", with: "<li><input type=\"checkbox\" disabled> $1</li>", options: .regularExpression)
         result = result.replacingOccurrences(of: "(?m)^- (.+)$", with: "<li>$1</li>", options: .regularExpression)
 
         result = result.replacingOccurrences(of: "(?m)^---$", with: "<hr>", options: .regularExpression)

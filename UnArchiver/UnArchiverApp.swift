@@ -108,6 +108,12 @@ private struct UITestRootView: View {
     - Item Two
     - Item Three
 
+    ## Task List
+
+    - [x] Done task
+    - [ ] Pending task
+    - [X] Also done
+
     ## Conclusion
 
     End of document.
