@@ -138,12 +138,12 @@ struct TextViewerView: View {
                 }
                 if isMarkdown {
                     Divider()
-                    Button { previewMode = .source } label: {
-                        Label("Source", systemImage: "doc.text")
+                    Picker("View", selection: $previewMode) {
+                        Label("Source", systemImage: "doc.text").tag(PreviewMode.source)
+                        Label("Rendered", systemImage: "eye").tag(PreviewMode.rendered)
                     }
-                    Button { previewMode = .rendered } label: {
-                        Label("Rendered", systemImage: "eye")
-                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
                 }
                 Divider()
                 Button { handleShare() } label: {
