@@ -57,8 +57,9 @@ struct TextViewerView: View {
 
     @AppStorage("showWhitespaceIndicators") private var showWhitespace = false
     @AppStorage("showIndentGuides") private var showIndentLines = false
-    // DIAGNOSTIC: live geometry overlay for the word-wrap clipping bug. Remove later.
-    @AppStorage("debugLayoutOverlay") private var showDebugOverlay = false
+    // DIAGNOSTIC: non-persistent (@State) so it always starts OFF on launch and a crash
+    // in the overlay can never lock the user out of opening files. Remove later.
+    @State private var showDebugOverlay = false
 
     private var canShowText: Bool { decodedText != nil }
 
