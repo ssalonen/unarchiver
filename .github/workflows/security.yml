@@ -25,6 +25,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # Install XcodeGen and generate the project BEFORE initializing CodeQL.
+      # CodeQL's init injects a build tracer via DYLD_INSERT_LIBRARIES, which
+      # makes Homebrew detect itself as running under Rosetta 2 and refuse to
+      # install into the ARM prefix (/opt/homebrew). Running brew here keeps it
+      # in a normal, untraced environment. Project generation doesn't need to
+      # be traced — only the Swift build below does.
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
@@ -40,7 +52,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: SourcePackages
-          key: ${{ runner.os }}-spm-${{ hashFiles('UnArchiver.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
 
@@ -141,15 +153,16 @@ jobs:
               "swift-snapshot-testing": "https://github.com/pointfreeco/swift-snapshot-testing",
           }
 
-          with open("UnArchiver.xcodeproj/project.pbxproj") as f:
-              pbxproj = f.read()
+          with open("project.yml") as f:
+              project_yml = f.read()
 
           errors = []
           for name, url in EXPECTED.items():
-              pattern = rf'XCRemoteSwiftPackageReference "{re.escape(name)}"[^{{]*\{{[^}}]*repositoryURL\s*=\s*"([^"]+)"'
-              m = re.search(pattern, pbxproj, re.DOTALL)
+              # Match a package entry:  <name>:\n    url: <url>
+              pattern = rf'(?m)^\s+{re.escape(name)}:\s*\n\s+url:\s*"?([^"\s]+)"?'
+              m = re.search(pattern, project_yml)
               if not m:
-                  errors.append(f"MISSING: {name} not found in project.pbxproj")
+                  errors.append(f"MISSING: {name} not found in project.yml")
               elif m.group(1) != url:
                   errors.append(
                       f"MISMATCH: {name}\n"
@@ -166,45 +179,37 @@ jobs:
               sys.exit(1)
           PYEOF
 
-      - name: Verify Package.swift matches project.pbxproj
+      - name: Verify Package.swift matches project.yml
         run: |
           python3 - <<'PYEOF'
           import re, sys
 
-          pbxproj   = open("UnArchiver.xcodeproj/project.pbxproj").read()
-          pkg_swift = open("Package.swift").read()
+          project_yml = open("project.yml").read()
+          pkg_swift   = open("Package.swift").read()
 
-          # --- Parse project.pbxproj -------------------------------------------
-          # The XCRemoteSwiftPackageReference section looks like:
-          #   /* Begin XCRemoteSwiftPackageReference section */
-          #   UUID /* XCRemoteSwiftPackageReference "NAME" */ = {
-          #       isa = XCRemoteSwiftPackageReference;
-          #       repositoryURL = "URL";
-          #       requirement = { kind = upToNextMajorVersion; minimumVersion = X.Y.Z; };
-          #   };
-          #   /* End XCRemoteSwiftPackageReference section */
-          #
-          # NOTE: nested braces (requirement = { }) break naive block-end detection,
-          # so we parse the whole section and zip urls with versions in order.
-          section = re.search(
-              r'/\* Begin XCRemoteSwiftPackageReference section \*/'
-              r'(.*?)'
-              r'/\* End XCRemoteSwiftPackageReference section \*/',
-              pbxproj, re.DOTALL
-          )
-          if not section:
-              print("ERROR: XCRemoteSwiftPackageReference section not found in project.pbxproj")
+          # --- Parse project.yml -----------------------------------------------
+          # The packages: section looks like:
+          #   packages:
+          #     NAME:
+          #       url: URL
+          #       from: X.Y.Z
+          block = re.search(r'(?ms)^packages:\s*\n(.*?)(?=^\S|\Z)', project_yml)
+          if not block:
+              print("ERROR: packages: section not found in project.yml")
               sys.exit(1)
 
-          urls     = re.findall(r'repositoryURL\s*=\s*"([^"]+)"',  section.group(1))
-          versions = re.findall(r'minimumVersion\s*=\s*(\S+?)\s*;', section.group(1))
+          # Each package lists url then from on consecutive lines; pair them up.
+          pbx_deps = {
+              url: ver
+              for url, ver in re.findall(
+                  r'(?m)^\s+url:\s*"?([^"\s]+)"?\s*\n\s+from:\s*"?([^"\s]+)"?',
+                  block.group(1)
+              )
+          }
 
-          if len(urls) != len(versions):
-              print(f"ERROR: found {len(urls)} URLs but {len(versions)} minimumVersion values "
-                    f"in pbxproj — manual inspection needed")
+          if not pbx_deps:
+              print("ERROR: no packages parsed from project.yml")
               sys.exit(1)
-
-          pbx_deps = dict(zip(urls, versions))
 
           # --- Parse Package.swift ---------------------------------------------
           # Lines look like:
@@ -224,14 +229,14 @@ jobs:
               if url not in pkg_deps:
                   errors.append(
                       f"MISSING from Package.swift:\n"
-                      f"  {url}  (pbxproj requires {pbx_ver})\n"
+                      f"  {url}  (project.yml requires {pbx_ver})\n"
                       f"  Add:  .package(url: \"{url}\", from: \"{pbx_ver}\")"
                   )
               elif pkg_deps[url] != pbx_ver:
                   errors.append(
                       f"VERSION MISMATCH: {url}\n"
-                      f"  project.pbxproj requires : {pbx_ver}\n"
-                      f"  Package.swift declares   : {pkg_deps[url]}"
+                      f"  project.yml requires   : {pbx_ver}\n"
+                      f"  Package.swift declares : {pkg_deps[url]}"
                   )
               else:
                   print(f"OK  {url}  @  {pbx_ver}")
@@ -239,8 +244,8 @@ jobs:
           for url, pkg_ver in pkg_deps.items():
               if url not in pbx_deps:
                   errors.append(
-                      f"EXTRA in Package.swift (not in pbxproj): {url} @ {pkg_ver}\n"
-                      f"  Either add it to the Xcode project or remove it from Package.swift"
+                      f"EXTRA in Package.swift (not in project.yml): {url} @ {pkg_ver}\n"
+                      f"  Either add it to project.yml or remove it from Package.swift"
                   )
 
           if errors:

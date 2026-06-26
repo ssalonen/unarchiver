@@ -30,14 +30,22 @@ Open TAR, GZip, BZip2, XZ, and ZIP archives on iPhone/iPad.
 
 ## Build from source
 
-Requires Xcode 15+ and macOS 13+.
+Requires Xcode 15+ and macOS 13+, plus [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+
+The Xcode project is generated from [`project.yml`](project.yml) and is **not**
+checked in — generate it before opening:
 
 ```bash
 git clone https://github.com/ssalonen/unarchiver
+cd unarchiver
+brew install xcodegen   # once
+xcodegen generate
 open UnArchiver.xcodeproj
 ```
 
-Xcode will resolve the [SWCompression](https://github.com/tsolomko/SWCompression) package automatically.
+Re-run `xcodegen generate` whenever `project.yml` changes (e.g. after adding a
+file or a package). Xcode will resolve the
+[SWCompression](https://github.com/tsolomko/SWCompression) package automatically.
 
 ## Releases
 
