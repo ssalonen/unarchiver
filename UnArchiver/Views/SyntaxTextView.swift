@@ -221,19 +221,13 @@ final class IndentGuideTextView: UITextView {
         didSet { guideOverlay.setNeedsDisplay() }
     }
 
-    // DIAGNOSTIC: live geometry readout. Toggle from the options menu ("Layout Debug").
-    // Used to capture on-device values for the word-wrap clipping bug, which does not
-    // reproduce on the simulator. Remove once the cause is confirmed.
+    // DIAGNOSTIC: live geometry readout, toggled from the options menu ("Layout Debug").
+    // The toggle is non-persistent (SwiftUI @State) so it always starts OFF on launch —
+    // a crash here can never lock the user out. The readout is updated only from
+    // layoutSubviews (never from a contentOffset observer), which a scroll view already
+    // calls while scrolling, so it stays live without reentrant UIKit mutation.
     var debugOverlayEnabled = false {
-        didSet {
-            debugLabel.isHidden = !debugOverlayEnabled
-            if debugOverlayEnabled { updateDebugLabel() }
-        }
-    }
-
-    // Update the debug readout on every scroll, not just on relayout.
-    override var contentOffset: CGPoint {
-        didSet { if debugOverlayEnabled { updateDebugLabel() } }
+        didSet { debugLabel.isHidden = !debugOverlayEnabled; setNeedsLayout() }
     }
 
     private lazy var debugLabel: UILabel = {
@@ -274,7 +268,6 @@ final class IndentGuideTextView: UITextView {
             width: debugLabel.bounds.width + 8, height: debugLabel.bounds.height + 6
         )
         debugLabel.textAlignment = .left
-        bringSubviewToFront(debugLabel)
     }
 
     // Exposes scroll geometry to XCUITest via .value without requiring VoiceOver.
