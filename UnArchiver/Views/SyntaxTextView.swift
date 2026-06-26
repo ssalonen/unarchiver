@@ -98,12 +98,13 @@ struct SyntaxTextView: UIViewRepresentable {
                 attributed = withWhitespaceMarkers(attributed)
             }
 
-            // NSAttributedString paragraph styles (from Highlightr or the plain fallback) carry
-            // lineBreakMode = .byWordWrapping, which overrides the text container setting and causes
-            // text to wrap even when widthTracksTextView is false. Patch every span when no-wrap.
-            if !wordWrap {
-                attributed = withNoWrapParagraphStyles(attributed)
-            }
+            // NSAttributedString paragraph styles (from Highlightr, or NSParagraphStyle.default
+            // for the plain fallback) carry their own lineBreakMode, which overrides the text
+            // container setting. Stamp every span with the mode that matches the wrap setting so
+            // Highlightr's styles (e.g. for Markdown) can't keep the text from wrapping:
+            //  - wrap ON  → .byWordWrapping so highlighted text actually wraps to the view width
+            //  - wrap OFF → .byClipping so lines extend full width for horizontal scrolling
+            attributed = withParagraphLineBreak(attributed, mode: wordWrap ? .byWordWrapping : .byClipping)
 
             let result: NSAttributedString
             if !searchText.isEmpty {
@@ -168,15 +169,17 @@ struct SyntaxTextView: UIViewRepresentable {
             return result
         }
 
-        private func withNoWrapParagraphStyles(_ source: NSAttributedString) -> NSAttributedString {
+        private func withParagraphLineBreak(
+            _ source: NSAttributedString, mode: NSLineBreakMode
+        ) -> NSAttributedString {
             guard source.length > 0 else { return source }
             // Apple docs: modifying the receiver inside enumerateAttribute causes undefined behavior.
-            // Just stamp .byClipping across the entire string in one shot instead.
+            // Just stamp the requested line break mode across the entire string in one shot instead.
             let mutable = NSMutableAttributedString(attributedString: source)
-            let noWrap = NSMutableParagraphStyle()
-            noWrap.lineBreakMode = .byClipping
+            let style = NSMutableParagraphStyle()
+            style.lineBreakMode = mode
             mutable.addAttribute(
-                .paragraphStyle, value: noWrap,
+                .paragraphStyle, value: style,
                 range: NSRange(location: 0, length: mutable.length)
             )
             return mutable
@@ -302,16 +305,32 @@ final class IndentGuideTextView: UITextView {
     required init?(coder: NSCoder) { fatalError() }
 
     override func layoutSubviews() {
-        // Set BEFORE super so UITextView's layout engine sees the infinite container
-        // and doesn't wrap lines to the view's bounds width.
-        if !textContainer.widthTracksTextView {
+        if textContainer.widthTracksTextView {
+            // ── Word wrap ON ────────────────────────────────────────────────
+            super.layoutSubviews()
+            // Text is wrapped to the visible width, so it never needs more than
+            // bounds.width horizontally. But UITextView does NOT reliably shrink
+            // contentSize.width back down after a wrap toggle: the no-wrap path below
+            // inflated it to the full unwrapped line width, and that value can survive
+            // the switch to wrap mode. The scroll view then keeps horizontal scroll room
+            // over an empty region, so scrolling right slides the text away and reveals
+            // only blank background. Pin the width to the view and pull any leftover
+            // horizontal offset back to 0 so there is nothing blank to scroll into.
+            if contentSize.width > bounds.width {
+                contentSize = CGSize(width: bounds.width, height: contentSize.height)
+            }
+            if contentOffset.x != 0 {
+                contentOffset = CGPoint(x: 0, y: contentOffset.y)
+            }
+        } else {
+            // ── Word wrap OFF (horizontal scroll) ───────────────────────────
+            // Set BEFORE super so UITextView's layout engine sees the infinite container
+            // and doesn't wrap lines to the view's bounds width.
             textContainer.size = CGSize(
                 width: CGFloat.greatestFiniteMagnitude,
                 height: CGFloat.greatestFiniteMagnitude
             )
-        }
-        super.layoutSubviews()
-        if !textContainer.widthTracksTextView {
+            super.layoutSubviews()
             // UITextView silently forces contentSize.width = bounds.width for
             // vertical-scroll mode even with an infinite text container.
             // Reapply the infinite size, re-run layout, then override contentSize.
