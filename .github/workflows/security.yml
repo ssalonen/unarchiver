@@ -23,7 +23,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Install XcodeGen and generate the project BEFORE initializing CodeQL.
       # CodeQL's init injects a build tracer via DYLD_INSERT_LIBRARIES, which
@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Query OSV API for Swift dependencies
         run: |
@@ -140,7 +140,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Verify expected package URLs
         run: |
@@ -266,7 +266,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v5
