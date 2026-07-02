@@ -94,6 +94,7 @@ jobs:
             -derivedDataPath .build/DerivedDataWW \
             -only-testing:UnArchiverUITests/TextViewerWordWrapBehaviorTests \
             -only-testing:UnArchiverUITests/TextViewerWrapToggleClippingTests \
+            -only-testing:UnArchiverUITests/TextViewerNoWrapRenderingTests \
             -only-testing:UnArchiverUITests/TextViewerScrollingTests \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
