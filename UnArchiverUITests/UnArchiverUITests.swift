@@ -580,28 +580,40 @@ final class TextViewerNoWrapRenderingTests: XCTestCase {
             "(got \(offWidth) vs frame \(frameWidth)); otherwise this test proves nothing"
         )
 
-        // Scroll right until the entire initial screenful is out of the viewport.
+        // Scroll right until well past TWICE the viewport width. Empirically the broken
+        // render surface extends to about 2× the viewport (bounds + overdraw): at
+        // offsetX ≈ 1.7× frame the viewport still showed partial ink (0.0299), a
+        // hair under threshold. Past 2× frame the bug state is decisively blank
+        // (~0.002) while a correct implementation still shows full text (~0.1),
+        // giving this assertion wide margins on both sides.
+        let targetOffset = frameWidth * 2 + 50
         var offsetX = 0
-        for _ in 0..<8 {
+        for _ in 0..<10 {
             textView.swipeLeft()
             waitUntil(timeout: 1.5) {
                 offsetX = self.scrollState(of: self.textView)?.offsetX ?? 0
-                return offsetX > frameWidth
+                return offsetX > targetOffset
             }
-            if offsetX > frameWidth { break }
+            if offsetX > targetOffset { break }
         }
         XCTAssertGreaterThan(
-            offsetX, frameWidth,
-            "PRECONDITION: must scroll past the first screen-width " +
-            "(offsetX \(offsetX) vs frame \(frameWidth)); otherwise this test proves nothing"
+            offsetX, targetOffset,
+            "PRECONDITION: must scroll past 2× the viewport width " +
+            "(offsetX \(offsetX) vs target \(targetOffset)); otherwise this test proves nothing"
         )
 
         Thread.sleep(forTimeInterval: 0.6) // let deceleration settle
+        let shot = textView.screenshot()
+        let attachment = XCTAttachment(screenshot: shot)
+        attachment.name = "no-wrap-viewport-at-offset-\(offsetX)"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+
         let ink = inkFraction(of: textView)
         XCTAssertGreaterThan(
             ink, 0.03,
             "Word wrap OFF: viewport at offsetX \(offsetX) (content \(offWidth), frame " +
-            "\(frameWidth)) is blank (ink=\(ink)). Glyphs are only rendered in the first " +
+            "\(frameWidth)) is blank (ink=\(ink)). Glyphs are only rendered near the first " +
             "screen-width — the scroll range is forged wide while the render surface " +
             "stays bounds-wide. This is the word-wrap clipping bug."
         )
