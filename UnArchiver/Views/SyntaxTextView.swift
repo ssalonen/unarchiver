@@ -404,6 +404,25 @@ final class IndentGuideTextView: UITextView {
         debugLabel.textAlignment = .left
     }
 
+    // UITextView's DEFAULT accessibilityValue is the entire document text. Every
+    // XCUITest query snapshots the accessibility tree and serializes that value, so a
+    // large file (a 94KB hex dump) makes every UI query time out. Overriding with a
+    // short geometry string restores the pre-refactor behavior — this override existed
+    // on the text view before the scroll-host split and was load-bearing for exactly
+    // this reason; removing it broke the hex test suite. XCUITest reads scroll
+    // geometry from the HOST's value; this one exists to keep AX snapshots cheap.
+    override var accessibilityValue: String? {
+        get {
+            func safe(_ v: CGFloat) -> Int {
+                guard v.isFinite else { return 0 }
+                return Int(min(max(v, -1e9), 1e9))
+            }
+            return "cw:\(safe(contentSize.width)),ch:\(safe(contentSize.height))," +
+                   "ox:\(safe(effectiveHorizontalOffset)),oy:\(safe(contentOffset.y))"
+        }
+        set { }
+    }
+
     private lazy var guideOverlay: IndentGuideOverlay = {
         let v = IndentGuideOverlay()
         v.backgroundColor = .clear
