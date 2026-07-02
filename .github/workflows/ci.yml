@@ -245,6 +245,9 @@ jobs:
       - name: Run UI tests
         run: |
           set -o pipefail
+          # Word wrap & scrolling classes are skipped here — the dedicated
+          # "Word Wrap & Scrolling Tests" job already runs them on every push,
+          # so running them again in the full suite doubles ~8 min of CI time.
           xcodebuild test-without-building \
             -project UnArchiver.xcodeproj \
             -scheme UnArchiver \
@@ -252,6 +255,10 @@ jobs:
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
             -resultBundlePath .build/ui-tests.xcresult \
+            -skip-testing:UnArchiverUITests/TextViewerWordWrapBehaviorTests \
+            -skip-testing:UnArchiverUITests/TextViewerWrapToggleClippingTests \
+            -skip-testing:UnArchiverUITests/TextViewerNoWrapRenderingTests \
+            -skip-testing:UnArchiverUITests/TextViewerScrollingTests \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -maximum-test-execution-time-allowance 300 \
