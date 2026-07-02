@@ -1,7 +1,16 @@
 import SwiftUI
 import Highlightr
 
-/// UITextView wrapper that applies syntax highlighting via Highlightr
+/// UITextView wrapper that applies syntax highlighting via Highlightr.
+///
+/// Word wrap OFF is implemented with an outer horizontal UIScrollView hosting a
+/// text view whose FRAME is as wide as its widest line. Modern UITextView only
+/// renders glyphs within (roughly) its own bounds — overriding contentSize to a
+/// wider value produces scrollable blank space, not rendered text (the long-standing
+/// "clipped text / whitespace on the right" bug). Giving the text view an honestly
+/// wide frame makes render geometry and scroll geometry the same thing: the outer
+/// scroll view pans horizontally over fully laid-out text, while the text view keeps
+/// its own lazy vertical scrolling for large files.
 struct SyntaxTextView: UIViewRepresentable {
     let code: String
     let language: String?
@@ -18,25 +27,32 @@ struct SyntaxTextView: UIViewRepresentable {
 
     // MARK: UIViewRepresentable
 
-    func makeUIView(context: Context) -> IndentGuideTextView {
-        let tv = IndentGuideTextView()
+    func makeUIView(context: Context) -> CodeScrollHostView {
+        let host = CodeScrollHostView()
+        host.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        host.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        // The identifier (and the geometry accessibilityValue) live on the HOST, which
+        // is always viewport-sized. The text view's frame is text-wide in no-wrap mode,
+        // so XCUITest coordinate math (element center for swipes, frame.width) would be
+        // offscreen/wrong against it. Tests already fall back to
+        // scrollViews["codeTextView"] when no text view matches.
+        host.accessibilityIdentifier = "codeTextView"
+
+        let tv = host.textView
         tv.isEditable = false
         tv.isSelectable = true
         tv.isScrollEnabled = true
         tv.autocorrectionType = .no
         tv.autocapitalizationType = .none
         tv.dataDetectorTypes = []
-        tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        tv.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         tv.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
-        tv.accessibilityIdentifier = "codeTextView"
-        return tv
+        return host
     }
 
-    func updateUIView(_ tv: IndentGuideTextView, context: Context) {
-        tv.debugOverlayEnabled = showDebugOverlay
+    func updateUIView(_ host: CodeScrollHostView, context: Context) {
+        host.textView.debugOverlayEnabled = showDebugOverlay
         context.coordinator.apply(
-            to: tv,
+            to: host,
             code: code,
             language: language,
             fontSize: fontSize,
@@ -58,7 +74,7 @@ struct SyntaxTextView: UIViewRepresentable {
         private var lastKey = ""
 
         func apply(
-            to tv: IndentGuideTextView,
+            to host: CodeScrollHostView,
             code: String,
             language: String?,
             fontSize: CGFloat,
@@ -72,20 +88,7 @@ struct SyntaxTextView: UIViewRepresentable {
             guard key != lastKey else { return }
             lastKey = key
 
-            if wordWrap {
-                tv.textContainer.widthTracksTextView = true
-                tv.textContainer.lineBreakMode = .byWordWrapping
-                tv.showsHorizontalScrollIndicator = false
-                tv.contentOffset = CGPoint(x: 0, y: tv.contentOffset.y)
-            } else {
-                tv.textContainer.widthTracksTextView = false
-                tv.textContainer.size = CGSize(
-                    width: CGFloat.greatestFiniteMagnitude,
-                    height: CGFloat.greatestFiniteMagnitude
-                )
-                tv.textContainer.lineBreakMode = .byClipping
-                tv.showsHorizontalScrollIndicator = true
-            }
+            let tv = host.textView
 
             highlightr?.setTheme(to: theme)
 
@@ -103,7 +106,8 @@ struct SyntaxTextView: UIViewRepresentable {
             // container setting. Stamp every span with the mode that matches the wrap setting so
             // Highlightr's styles (e.g. for Markdown) can't keep the text from wrapping:
             //  - wrap ON  → .byWordWrapping so highlighted text actually wraps to the view width
-            //  - wrap OFF → .byClipping so lines extend full width for horizontal scrolling
+            //  - wrap OFF → .byClipping so lines never wrap, even if the measured width is a
+            //    point short or the line exceeds the hard width cap
             attributed = withParagraphLineBreak(attributed, mode: wordWrap ? .byWordWrapping : .byClipping)
 
             let result: NSAttributedString
@@ -113,19 +117,54 @@ struct SyntaxTextView: UIViewRepresentable {
                 result = attributed
             }
 
+            // The container tracks the text view's width in BOTH modes; what differs is the
+            // frame the host gives the text view (viewport-wide vs text-wide).
+            tv.textContainer.widthTracksTextView = true
+            tv.textContainer.lineBreakMode = wordWrap ? .byWordWrapping : .byClipping
+
             tv.attributedText = result
 
-            if let bg = highlightr?.theme?.themeBackgroundColor {
-                tv.backgroundColor = bg
+            if wordWrap {
+                host.noWrapTextWidth = nil
+                host.isScrollEnabled = false
+                host.showsHorizontalScrollIndicator = false
+                host.setContentOffset(.zero, animated: false)
+                tv.contentOffset = CGPoint(x: 0, y: tv.contentOffset.y)
             } else {
-                tv.backgroundColor = .systemBackground
+                host.noWrapTextWidth = Self.measuredWidth(of: result, in: tv)
+                host.isScrollEnabled = true
+                host.showsHorizontalScrollIndicator = true
             }
+            host.setNeedsLayout()
+
+            let bg = highlightr?.theme?.themeBackgroundColor ?? .systemBackground
+            tv.backgroundColor = bg
+            host.backgroundColor = bg
 
             tv.showIndentLines = showIndentLines
             tv.charWidth = charWidth
         }
 
         // MARK: - Private
+
+        /// Width the text view needs so no line wraps: widest laid-out line plus insets
+        /// and line-fragment padding. Hard-capped so a pathological single-line file
+        /// (megabytes of minified JSON) cannot demand an absurdly wide layer; lines
+        /// beyond the cap clip (paragraph style .byClipping) instead of wrapping.
+        private static let maxNoWrapWidth: CGFloat = 10_000
+
+        private static func measuredWidth(of text: NSAttributedString, in tv: UITextView) -> CGFloat {
+            let bounding = text.boundingRect(
+                with: CGSize(width: CGFloat.greatestFiniteMagnitude,
+                             height: CGFloat.greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin],
+                context: nil
+            )
+            let insets = tv.textContainerInset
+            let padding = tv.textContainer.lineFragmentPadding
+            let w = ceil(bounding.width) + insets.left + insets.right + 2 * padding + 4
+            return min(w, maxNoWrapWidth)
+        }
 
         private func highlighted(
             code: String, language: String?, fontSize: CGFloat, theme: String
@@ -209,9 +248,77 @@ struct SyntaxTextView: UIViewRepresentable {
     }
 }
 
+// MARK: - CodeScrollHostView
+
+/// Horizontal scroll host for the code text view. In word-wrap mode it is inert
+/// (scrolling disabled, text view fills the viewport). In no-wrap mode it gives the
+/// text view a frame as wide as its measured text and pans over it horizontally,
+/// while the text view scrolls vertically inside. Perpendicular nested scroll views
+/// compose natively in UIKit.
+final class CodeScrollHostView: UIScrollView {
+
+    let textView = IndentGuideTextView()
+
+    /// Measured full text width for no-wrap mode; nil means word-wrap (viewport-wide).
+    var noWrapTextWidth: CGFloat? {
+        didSet { if noWrapTextWidth != oldValue { setNeedsLayout() } }
+    }
+
+    // Exposes scroll geometry to XCUITest via .value without requiring VoiceOver.
+    // Horizontal values come from this host (which owns horizontal scrolling);
+    // vertical values from the text view (which owns vertical scrolling).
+    override var accessibilityValue: String? {
+        get {
+            func safe(_ v: CGFloat) -> Int {
+                guard v.isFinite else { return 0 }
+                return Int(min(max(v, -1e9), 1e9))
+            }
+            return "cw:\(safe(contentSize.width)),ch:\(safe(textView.contentSize.height))," +
+                   "ox:\(safe(contentOffset.x)),oy:\(safe(textView.contentOffset.y))"
+        }
+        set { }
+    }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        showsVerticalScrollIndicator = false
+        alwaysBounceVertical = false
+        alwaysBounceHorizontal = false
+        isScrollEnabled = false
+        addSubview(textView)
+        textView.horizontalHost = self
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let width: CGFloat
+        if let textWidth = noWrapTextWidth {
+            width = max(bounds.width, textWidth)
+        } else {
+            width = bounds.width
+        }
+        let target = CGRect(x: 0, y: 0, width: width, height: bounds.height)
+        if textView.frame != target {
+            textView.frame = target
+        }
+        let size = CGSize(width: width, height: bounds.height)
+        if contentSize != size {
+            contentSize = size
+        }
+        // Keep the viewport-pinned overlays (indent guides, debug readout) in place
+        // while THIS scroll view pans horizontally; the text view's own layoutSubviews
+        // handles vertical scrolling.
+        textView.updateViewportOverlays()
+    }
+}
+
 // MARK: - IndentGuideTextView
 
 final class IndentGuideTextView: UITextView {
+
+    weak var horizontalHost: CodeScrollHostView?
 
     var showIndentLines = false {
         didSet { guideOverlay.isHidden = !showIndentLines; guideOverlay.setNeedsDisplay() }
@@ -219,6 +326,20 @@ final class IndentGuideTextView: UITextView {
 
     var charWidth: CGFloat = 8 {
         didSet { guideOverlay.setNeedsDisplay() }
+    }
+
+    /// Effective horizontal scroll offset: the host pans horizontally in no-wrap mode;
+    /// this view itself never scrolls horizontally.
+    var effectiveHorizontalOffset: CGFloat {
+        horizontalHost?.contentOffset.x ?? contentOffset.x
+    }
+
+    /// The viewport (visible region) in this view's coordinate space, accounting for
+    /// the host's horizontal offset and our own vertical offset.
+    var viewportRect: CGRect {
+        let width = min(horizontalHost?.bounds.width ?? bounds.width, bounds.width)
+        return CGRect(x: effectiveHorizontalOffset, y: contentOffset.y,
+                      width: width, height: bounds.height)
     }
 
     // DIAGNOSTIC: live geometry readout, toggled from the options menu ("Layout Debug").
@@ -243,8 +364,15 @@ final class IndentGuideTextView: UITextView {
         return l
     }()
 
+    // Safe integer string: guards against non-finite / out-of-range values, which
+    // previously crashed the overlay (Int(CGFloat.greatestFiniteMagnitude) traps).
+    private func fin(_ v: CGFloat) -> String {
+        guard v.isFinite, abs(v) < 1e9 else { return "∞" }
+        return "\(Int(v))"
+    }
+
     private func updateDebugLabel() {
-        let wrap = textContainer.widthTracksTextView
+        let wrap = textContainer.widthTracksTextView && horizontalHost?.noWrapTextWidth == nil
         let lbm: String
         switch textContainer.lineBreakMode {
         case .byWordWrapping: lbm = "word"
@@ -253,27 +381,27 @@ final class IndentGuideTextView: UITextView {
         case .byTruncatingTail: lbm = "trunc"
         default: lbm = "\(textContainer.lineBreakMode.rawValue)"
         }
-        let overflow = contentSize.width > bounds.width + 1 ? "  ⚠️ WIDE" : ""
+        let hostLine: String
+        if let host = horizontalHost {
+            hostLine = "host     \(fin(host.bounds.width))×\(fin(host.bounds.height))  off \(fin(host.contentOffset.x))  cw \(fin(host.contentSize.width))"
+        } else {
+            hostLine = "host     (none)"
+        }
         debugLabel.text = [
-            "bounds   \(Int(bounds.width))×\(Int(bounds.height))",
-            "content  \(Int(contentSize.width))×\(Int(contentSize.height))\(overflow)",
-            "containr \(Int(textContainer.size.width))×\(Int(textContainer.size.height))",
-            "offset   \(Int(contentOffset.x)),\(Int(contentOffset.y))",
-            "wrap=\(wrap)  lbm=\(lbm)  pad=\(Int(textContainer.lineFragmentPadding))"
+            "frame    \(fin(bounds.width))×\(fin(bounds.height))",
+            "content  \(fin(contentSize.width))×\(fin(contentSize.height))",
+            "containr \(fin(textContainer.size.width))×\(fin(textContainer.size.height))",
+            hostLine,
+            "offset   \(fin(effectiveHorizontalOffset)),\(fin(contentOffset.y))",
+            "wrap=\(wrap)  lbm=\(lbm)  pad=\(fin(textContainer.lineFragmentPadding))"
         ].joined(separator: "\n")
         debugLabel.sizeToFit()
-        // Pin to the top-left of the visible viewport (bounds.origin == contentOffset).
+        let viewport = viewportRect
         debugLabel.frame = CGRect(
-            x: bounds.minX + 4, y: bounds.minY + 4,
+            x: viewport.minX + 4, y: viewport.minY + 4,
             width: debugLabel.bounds.width + 8, height: debugLabel.bounds.height + 6
         )
         debugLabel.textAlignment = .left
-    }
-
-    // Exposes scroll geometry to XCUITest via .value without requiring VoiceOver.
-    override var accessibilityValue: String? {
-        get { "cw:\(Int(contentSize.width)),ch:\(Int(contentSize.height)),ox:\(Int(contentOffset.x)),oy:\(Int(contentOffset.y))" }
-        set { }
     }
 
     private lazy var guideOverlay: IndentGuideOverlay = {
@@ -286,10 +414,10 @@ final class IndentGuideTextView: UITextView {
 
     override init(frame: CGRect, textContainer: NSTextContainer?) {
         super.init(frame: frame, textContainer: textContainer)
-        // Accessing layoutManager forces TextKit 1 (NSLayoutManager-based).
-        // TextKit 2 ignores textContainer.size for line breaking, so horizontal
-        // scroll (widthTracksTextView = false) only works under TextKit 1.
+        // Accessing layoutManager forces TextKit 1 (NSLayoutManager-based) so the
+        // indent-guide overlay's charWidth-based column math matches glyph layout.
         _ = self.layoutManager
+        showsHorizontalScrollIndicator = false
         addSubview(guideOverlay)
         guideOverlay.textView = self
         addSubview(debugLabel)
@@ -297,53 +425,30 @@ final class IndentGuideTextView: UITextView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    override func layoutSubviews() {
-        if textContainer.widthTracksTextView {
-            // ── Word wrap ON ────────────────────────────────────────────────
-            super.layoutSubviews()
-            // Text is wrapped to the visible width, so it never needs more than
-            // bounds.width horizontally. But UITextView does NOT reliably shrink
-            // contentSize.width back down after a wrap toggle: the no-wrap path below
-            // inflated it to the full unwrapped line width, and that value can survive
-            // the switch to wrap mode. The scroll view then keeps horizontal scroll room
-            // over an empty region, so scrolling right slides the text away and reveals
-            // only blank background. Pin the width to the view and pull any leftover
-            // horizontal offset back to 0 so there is nothing blank to scroll into.
-            if contentSize.width > bounds.width {
-                contentSize = CGSize(width: bounds.width, height: contentSize.height)
-            }
-            if contentOffset.x != 0 {
-                contentOffset = CGPoint(x: 0, y: contentOffset.y)
-            }
-        } else {
-            // ── Word wrap OFF (horizontal scroll) ───────────────────────────
-            // Set BEFORE super so UITextView's layout engine sees the infinite container
-            // and doesn't wrap lines to the view's bounds width.
-            textContainer.size = CGSize(
-                width: CGFloat.greatestFiniteMagnitude,
-                height: CGFloat.greatestFiniteMagnitude
-            )
-            super.layoutSubviews()
-            // UITextView silently forces contentSize.width = bounds.width for
-            // vertical-scroll mode even with an infinite text container.
-            // Reapply the infinite size, re-run layout, then override contentSize.
-            textContainer.size = CGSize(
-                width: CGFloat.greatestFiniteMagnitude,
-                height: CGFloat.greatestFiniteMagnitude
-            )
-            layoutManager.ensureLayout(for: textContainer)
-            let used = layoutManager.usedRect(for: textContainer)
-            let insets = textContainerInset
-            let w = ceil(used.width + insets.left + insets.right)
-            let h = ceil(used.height + insets.top + insets.bottom)
-            contentSize = CGSize(
-                width: max(bounds.width, w),
-                height: max(bounds.height, h)
-            )
+    /// Pin the indent-guide overlay and debug readout to the visible viewport. The
+    /// overlay is deliberately viewport-sized (never text-wide): a draw(_:)-backed
+    /// view as wide as the text would allocate an enormous backing store.
+    func updateViewportOverlays() {
+        let viewport = viewportRect
+        if guideOverlay.frame != viewport {
+            guideOverlay.frame = viewport
         }
-        guideOverlay.frame = bounds
         guideOverlay.setNeedsDisplay()
         if debugOverlayEnabled { updateDebugLabel() }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // This view never scrolls horizontally itself — the host does. Any residual
+        // horizontal offset or over-wide contentSize (e.g. left over from a wrap
+        // toggle) is corrected here.
+        if contentSize.width > bounds.width {
+            contentSize = CGSize(width: bounds.width, height: contentSize.height)
+        }
+        if contentOffset.x != 0 {
+            contentOffset = CGPoint(x: 0, y: contentOffset.y)
+        }
+        updateViewportOverlays()
     }
 }
 
@@ -360,7 +465,10 @@ private final class IndentGuideOverlay: UIView {
         guard tabWidth > 0 else { return }
 
         let insetLeft = tv.textContainerInset.left + tv.textContainer.lineFragmentPadding
-        let offsetX = tv.contentOffset.x
+        // The overlay's origin already tracks the horizontal viewport (frame.minX ==
+        // effectiveHorizontalOffset), so guide columns at absolute content x map to
+        // overlay-local x by subtracting that origin.
+        let offsetX = frame.minX
 
         context.setStrokeColor(UIColor.separator.withAlphaComponent(0.6).cgColor)
         context.setLineWidth(0.5)

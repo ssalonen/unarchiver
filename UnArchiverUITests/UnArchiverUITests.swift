@@ -444,6 +444,180 @@ final class TextViewerWrapToggleClippingTests: XCTestCase {
             "only whitespace shows. The word-wrap clipping bug."
         )
     }
+
+    // Regression: enabling Layout Debug with word wrap OFF must not crash. In no-wrap
+    // mode the text container width is CGFloat.greatestFiniteMagnitude, and the overlay
+    // formerly did Int(greatestFiniteMagnitude), which traps (EXC_BREAKPOINT). This
+    // reproduces that exact path and asserts the app stays alive.
+    func testLayoutDebugWithWordWrapOffDoesNotCrash() {
+        XCTAssertTrue(textView.waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 0.3)
+
+        app.toggleWordWrap() // OFF → container width becomes .greatestFiniteMagnitude
+        Thread.sleep(forTimeInterval: 0.3)
+
+        // Enable Layout Debug from the options menu.
+        let menu = app.buttons["fontSizeMenuButton"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        menu.tap()
+        let item = app.menuItem(label: "Layout Debug")
+        XCTAssertTrue(item.waitForExistence(timeout: 3))
+        item.tap()
+
+        // Force layout/scroll while the overlay is live.
+        textView.swipeLeft()
+        textView.swipeUp()
+        Thread.sleep(forTimeInterval: 0.5)
+
+        XCTAssertEqual(
+            app.state, .runningForeground,
+            "Enabling Layout Debug with word wrap OFF must not crash the app"
+        )
+        XCTAssertTrue(textView.exists)
+    }
+}
+
+// MARK: - No-wrap rendering tests
+//
+// The decisive test for the word-wrap-off clipping bug. With word wrap OFF the view
+// reports a wide contentSize and scrolls horizontally, but glyphs are only laid out in
+// the first bounds-width of content: layoutSubviews forges contentSize from
+// layoutManager.usedRect, which widens the SCROLLABLE range without widening the
+// surface UITextView actually RENDERS into. Scrolling right past the first screenful
+// then shows blank background where text should be.
+//
+// Numeric assertions (contentWidth / offsetX via accessibilityValue) cannot catch
+// this: they read back the very values the implementation forges. Only pixels can —
+// so this test scrolls fully past the first screen-width and asserts the viewport
+// still contains ink.
+
+final class TextViewerNoWrapRenderingTests: XCTestCase {
+    private var app: XCUIApplication!
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        // Lorem: 50 lines × ~450 chars (~3500pt wide unwrapped). Every visible row is
+        // mid-sentence text at any horizontal offset, so ink stays high wherever
+        // glyphs are actually rendered — and drops to ~0 where they are not.
+        app.launchArguments = ["--uitesting-lorem"]
+        app.launch()
+    }
+
+    override func tearDownWithError() throws { app = nil }
+
+    private var textView: XCUIElement { app.codeTextView }
+
+    private func scrollState(of el: XCUIElement) -> (contentWidth: Int, offsetX: Int)? {
+        guard let raw = el.value as? String else { return nil }
+        var d = [String: Int]()
+        for pair in raw.split(separator: ",") {
+            let kv = pair.split(separator: ":")
+            guard kv.count == 2, let v = Int(kv[1]) else { continue }
+            d[String(kv[0])] = v
+        }
+        guard let cw = d["cw"], let ox = d["ox"] else { return nil }
+        return (cw, ox)
+    }
+
+    private func waitUntil(timeout: TimeInterval = 3, condition: () -> Bool) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+    }
+
+    /// Fraction of pixels differing noticeably from the top-left (background) pixel.
+    /// ~0 means a blank viewport; rendered text pushes this well above 0.03.
+    private func inkFraction(of element: XCUIElement) -> Double {
+        guard let cg = element.screenshot().image.cgImage else { return 0 }
+        let w = cg.width, h = cg.height
+        guard w > 0, h > 0 else { return 0 }
+        let bytesPerPixel = 4
+        let bytesPerRow = bytesPerPixel * w
+        var pixels = [UInt8](repeating: 0, count: h * bytesPerRow)
+        guard let ctx = CGContext(
+            data: &pixels, width: w, height: h, bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return 0 }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+        let bgR = Int(pixels[0]), bgG = Int(pixels[1]), bgB = Int(pixels[2])
+        var ink = 0
+        var i = 0
+        while i < pixels.count {
+            let dr = abs(Int(pixels[i])     - bgR)
+            let dg = abs(Int(pixels[i + 1]) - bgG)
+            let db = abs(Int(pixels[i + 2]) - bgB)
+            if dr + dg + db > 60 { ink += 1 }
+            i += bytesPerPixel
+        }
+        return Double(ink) / Double(w * h)
+    }
+
+    // Word wrap OFF: after scrolling fully past the first screen-width of content,
+    // the viewport must still show text. If glyph layout is clipped to the view
+    // bounds while the scroll range is forged wide (the bug), the viewport here is
+    // pure background and this fails.
+    func testTextIsRenderedBeyondFirstScreenWhenWrapOff() {
+        XCTAssertTrue(textView.waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 0.5)
+        let frameWidth = Int(textView.frame.width)
+
+        XCTAssertGreaterThan(
+            inkFraction(of: textView), 0.03,
+            "Sanity: text must be visible before scrolling"
+        )
+
+        app.toggleWordWrap() // OFF
+        var offWidth = 0
+        waitUntil { offWidth = self.scrollState(of: self.textView)?.contentWidth ?? 0; return offWidth > frameWidth * 3 }
+        XCTAssertGreaterThan(
+            offWidth, frameWidth * 3,
+            "PRECONDITION: wrap OFF must report content much wider than the frame " +
+            "(got \(offWidth) vs frame \(frameWidth)); otherwise this test proves nothing"
+        )
+
+        // Scroll right until well past TWICE the viewport width. Empirically the broken
+        // render surface extends to about 2× the viewport (bounds + overdraw): at
+        // offsetX ≈ 1.7× frame the viewport still showed partial ink (0.0299), a
+        // hair under threshold. Past 2× frame the bug state is decisively blank
+        // (~0.002) while a correct implementation still shows full text (~0.1),
+        // giving this assertion wide margins on both sides.
+        let targetOffset = frameWidth * 2 + 50
+        var offsetX = 0
+        for _ in 0..<10 {
+            textView.swipeLeft()
+            waitUntil(timeout: 1.5) {
+                offsetX = self.scrollState(of: self.textView)?.offsetX ?? 0
+                return offsetX > targetOffset
+            }
+            if offsetX > targetOffset { break }
+        }
+        XCTAssertGreaterThan(
+            offsetX, targetOffset,
+            "PRECONDITION: must scroll past 2× the viewport width " +
+            "(offsetX \(offsetX) vs target \(targetOffset)); otherwise this test proves nothing"
+        )
+
+        Thread.sleep(forTimeInterval: 0.6) // let deceleration settle
+        let shot = textView.screenshot()
+        let attachment = XCTAttachment(screenshot: shot)
+        attachment.name = "no-wrap-viewport-at-offset-\(offsetX)"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+
+        let ink = inkFraction(of: textView)
+        XCTAssertGreaterThan(
+            ink, 0.03,
+            "Word wrap OFF: viewport at offsetX \(offsetX) (content \(offWidth), frame " +
+            "\(frameWidth)) is blank (ink=\(ink)). Glyphs are only rendered near the first " +
+            "screen-width — the scroll range is forged wide while the render surface " +
+            "stays bounds-wide. This is the word-wrap clipping bug."
+        )
+    }
 }
 
 // MARK: - Scrolling behavioral tests
