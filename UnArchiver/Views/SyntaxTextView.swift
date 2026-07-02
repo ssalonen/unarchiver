@@ -243,6 +243,14 @@ final class IndentGuideTextView: UITextView {
         return l
     }()
 
+    // Safe integer string: the text container width is CGFloat.greatestFiniteMagnitude
+    // in no-wrap mode, and Int(greatestFiniteMagnitude) TRAPS (EXC_BREAKPOINT). Format
+    // non-finite / out-of-range values as "∞" instead of converting to Int.
+    private func fin(_ v: CGFloat) -> String {
+        guard v.isFinite, abs(v) < 1e9 else { return "∞" }
+        return "\(Int(v))"
+    }
+
     private func updateDebugLabel() {
         let wrap = textContainer.widthTracksTextView
         let lbm: String
@@ -255,11 +263,11 @@ final class IndentGuideTextView: UITextView {
         }
         let overflow = contentSize.width > bounds.width + 1 ? "  ⚠️ WIDE" : ""
         debugLabel.text = [
-            "bounds   \(Int(bounds.width))×\(Int(bounds.height))",
-            "content  \(Int(contentSize.width))×\(Int(contentSize.height))\(overflow)",
-            "containr \(Int(textContainer.size.width))×\(Int(textContainer.size.height))",
-            "offset   \(Int(contentOffset.x)),\(Int(contentOffset.y))",
-            "wrap=\(wrap)  lbm=\(lbm)  pad=\(Int(textContainer.lineFragmentPadding))"
+            "bounds   \(fin(bounds.width))×\(fin(bounds.height))",
+            "content  \(fin(contentSize.width))×\(fin(contentSize.height))\(overflow)",
+            "containr \(fin(textContainer.size.width))×\(fin(textContainer.size.height))",
+            "offset   \(fin(contentOffset.x)),\(fin(contentOffset.y))",
+            "wrap=\(wrap)  lbm=\(lbm)  pad=\(fin(textContainer.lineFragmentPadding))"
         ].joined(separator: "\n")
         debugLabel.sizeToFit()
         // Pin to the top-left of the visible viewport (bounds.origin == contentOffset).

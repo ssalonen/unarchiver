@@ -444,6 +444,37 @@ final class TextViewerWrapToggleClippingTests: XCTestCase {
             "only whitespace shows. The word-wrap clipping bug."
         )
     }
+
+    // Regression: enabling Layout Debug with word wrap OFF must not crash. In no-wrap
+    // mode the text container width is CGFloat.greatestFiniteMagnitude, and the overlay
+    // formerly did Int(greatestFiniteMagnitude), which traps (EXC_BREAKPOINT). This
+    // reproduces that exact path and asserts the app stays alive.
+    func testLayoutDebugWithWordWrapOffDoesNotCrash() {
+        XCTAssertTrue(textView.waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 0.3)
+
+        app.toggleWordWrap() // OFF → container width becomes .greatestFiniteMagnitude
+        Thread.sleep(forTimeInterval: 0.3)
+
+        // Enable Layout Debug from the options menu.
+        let menu = app.buttons["fontSizeMenuButton"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        menu.tap()
+        let item = app.menuItem(label: "Layout Debug")
+        XCTAssertTrue(item.waitForExistence(timeout: 3))
+        item.tap()
+
+        // Force layout/scroll while the overlay is live.
+        textView.swipeLeft()
+        textView.swipeUp()
+        Thread.sleep(forTimeInterval: 0.5)
+
+        XCTAssertEqual(
+            app.state, .runningForeground,
+            "Enabling Layout Debug with word wrap OFF must not crash the app"
+        )
+        XCTAssertTrue(textView.exists)
+    }
 }
 
 // MARK: - Scrolling behavioral tests
