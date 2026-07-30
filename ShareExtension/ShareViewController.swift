@@ -8,11 +8,12 @@ import UniformTypeIdentifiers
 /// hands them off to the main app via a shared app-group container.
 final class ShareViewController: UIViewController {
 
-    // Derived at runtime so resigners (e.g. SideStore/AltStore) that rewrite
-    // the bundle ID don't break the share-extension ↔ main-app handoff.
-    // Extension bundle ID is "<main-id>.shareextension"; strip the last component.
+    // Derived at runtime from the bundle ID rather than hardcoded, so the app
+    // and Share Extension always agree on the App Group even if the bundle ID
+    // ever changes. Extension bundle ID is "<main-id>.shareextension"; strip
+    // the last component.
     private var appGroupIdentifier: String {
-        let id = Bundle.main.bundleIdentifier ?? "com.yourcompany.unarchiver.shareextension"
+        let id = Bundle.main.bundleIdentifier ?? "fi.mailhub.unarchiver.shareextension"
         let mainID = id.split(separator: ".").dropLast().joined(separator: ".")
         return "group.\(mainID)"
     }

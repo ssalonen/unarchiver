@@ -7,3 +7,13 @@ UnArchiver.xcodeproj/
 .build/
 DerivedData/
 *.xcuserstate
+build/
+
+# fastlane
+vendor/
+fastlane/report.xml
+fastlane/README.md
+*.ipa
+
+# Python bytecode (CI helper scripts)
+__pycache__/

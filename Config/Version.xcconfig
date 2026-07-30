@@ -1,0 +1,12 @@
+// Marketing/build version for the app and the Share Extension.
+//
+// Rewritten by .github/workflows/release.yml after each release. Keep these
+// keys OUT of project.yml's `settings:` — settings there land in the
+// generated project and out-rank this xcconfig, so a copy there would
+// silently win.
+//
+// Release builds get the authoritative version from the git tag via gym's
+// xcargs (see fastlane/Fastfile); this file is what local and simulator
+// builds use, and what keeps `main` in sync with the last release.
+MARKETING_VERSION = 1.2
+CURRENT_PROJECT_VERSION = 1
