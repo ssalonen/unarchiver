@@ -220,8 +220,8 @@ jobs:
       - name: Reset simulator app state
         if: always()
         run: |
-          xcrun simctl terminate "$SIM_UDID" com.yourcompany.unarchiver 2>/dev/null || true
-          xcrun simctl uninstall "$SIM_UDID" com.yourcompany.unarchiver 2>/dev/null || true
+          xcrun simctl terminate "$SIM_UDID" fi.mailhub.unarchiver 2>/dev/null || true
+          xcrun simctl uninstall "$SIM_UDID" fi.mailhub.unarchiver 2>/dev/null || true
 
       # ── UI tests + coverage ───────────────────────────────────────────────
       # Separate build WITH -enableCodeCoverage. XCUITests harvest profdata
@@ -378,8 +378,8 @@ jobs:
   #
   # Skipping releases for non-functional commits keeps version numbers
   # meaningful and self-defuses the loop: the release workflow's own
-  # "chore: update AltStore source" commit is non-releasable, so it can never
-  # trigger another release.
+  # "chore: bump version" commit is non-releasable, so it can never trigger
+  # another release.
   compute-version:
     name: Compute release version
     needs: [build, word-wrap]
@@ -400,7 +400,7 @@ jobs:
         id: semver
         run: |
           python3 - <<'PYEOF'
-          import json, os, re, subprocess
+          import os, re, subprocess
 
           def sh(*args):
               return subprocess.run(args, capture_output=True, text=True).stdout.strip()
@@ -411,21 +411,11 @@ jobs:
               m = semver_re.match(v or "")
               return tuple(int(x) for x in m.groups()) if m else (0, 0, 0)
 
-          # Highest semver git tag, e.g. v3.1.4
+          # Highest semver git tag, e.g. v3.1.4 — the base version to bump from.
           tags = sh("git", "tag", "--sort=-v:refname").splitlines()
           semver_tags = [t for t in tags if re.match(r'^v\d+\.\d+\.\d+$', t)]
           latest_tag = semver_tags[0] if semver_tags else None
-
-          # Base version = max(latest tag, version already published in the
-          # AltStore source). The source floor defends against tags missing
-          # from the clone so the version can only ever move forward.
           base = parse(latest_tag)
-          try:
-              with open("altstore-source.json") as f:
-                  src_ver = json.load(f)["apps"][0].get("version", "0.0.0")
-              base = max(base, parse(src_ver))
-          except Exception as e:
-              print("Could not read source version:", e)
 
           # Commits to classify: since the last tag (whole history if none).
           rng = f"{latest_tag}..HEAD" if latest_tag else "HEAD"
@@ -490,5 +480,8 @@ jobs:
     uses: ./.github/workflows/release.yml
     with:
       tag: ${{ needs.compute-version.outputs.new_tag }}
+    # Called workflows get NO repository secrets unless the caller forwards
+    # them; without this the fastlane signing steps see only empty strings.
+    secrets: inherit
     permissions:
       contents: write

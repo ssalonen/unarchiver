@@ -7,10 +7,19 @@ name: UnArchiver
 #   xcodegen generate       # regenerate UnArchiver.xcodeproj after editing this file
 #
 options:
-  bundleIdPrefix: com.yourcompany
+  bundleIdPrefix: fi.mailhub
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
+
+# Version lives in Config/Version.xcconfig, not here: the release pipeline
+# rewrites it after each release, and an xcconfig can be rewritten wholesale
+# instead of regex-patched. Do NOT re-add MARKETING_VERSION or
+# CURRENT_PROJECT_VERSION below — settings here are written into the generated
+# project and out-rank the xcconfig, so a copy here would silently win.
+configFiles:
+  Debug: Config/Version.xcconfig
+  Release: Config/Version.xcconfig
 
 settings:
   base:
@@ -39,7 +48,7 @@ targets:
           - "**/*.orig"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.unarchiver
+        PRODUCT_BUNDLE_IDENTIFIER: fi.mailhub.unarchiver
         INFOPLIST_FILE: UnArchiver/Info.plist
         CODE_SIGN_ENTITLEMENTS: UnArchiver/UnArchiver.entitlements
         CODE_SIGN_STYLE: Automatic
@@ -48,8 +57,6 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         SWIFT_OBJC_BRIDGING_HEADER: UnArchiver/UnArchiver-Bridging-Header.h
         SWIFT_EMIT_LOC_STRINGS: YES
-        MARKETING_VERSION: "1.2"
-        CURRENT_PROJECT_VERSION: 1
         TARGETED_DEVICE_FAMILY: "1,2"
         LD_RUNPATH_SEARCH_PATHS:
           - $(inherited)
@@ -71,14 +78,12 @@ targets:
           - "**/*.orig"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.unarchiver.shareextension
+        PRODUCT_BUNDLE_IDENTIFIER: fi.mailhub.unarchiver.shareextension
         INFOPLIST_FILE: ShareExtension/Info.plist
         CODE_SIGN_ENTITLEMENTS: ShareExtension/ShareExtension.entitlements
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: NO
         SKIP_INSTALL: YES
-        MARKETING_VERSION: "1.2"
-        CURRENT_PROJECT_VERSION: 1
         TARGETED_DEVICE_FAMILY: "1,2"
         LD_RUNPATH_SEARCH_PATHS:
           - $(inherited)
@@ -95,7 +100,7 @@ targets:
         link: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.unarchiver.tests
+        PRODUCT_BUNDLE_IDENTIFIER: fi.mailhub.unarchiver.tests
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -112,7 +117,7 @@ targets:
         link: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.unarchiver.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: fi.mailhub.unarchiver.uitests
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
         TARGETED_DEVICE_FAMILY: "1,2"

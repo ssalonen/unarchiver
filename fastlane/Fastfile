@@ -1,0 +1,203 @@
+# fastlane lanes for UnArchiver (iOS only).
+#
+# `beta` is the release lane (called by release.yml): sync signing, build a
+# signed IPA, verify it carries every declared entitlement, and upload to
+# TestFlight. `certificates` seeds/syncs signing (e.g. from a Mac).
+
+default_platform(:ios)
+
+APP_ID        = "fi.mailhub.unarchiver"
+SHAREEXT_ID   = "fi.mailhub.unarchiver.shareextension"
+PROJECT       = "UnArchiver.xcodeproj"
+SCHEME        = "UnArchiver"
+APP_TARGET    = "UnArchiver"
+SHAREEXT_TARGET = "ShareExtension"
+
+# Repo root. fastlane runs lanes with its CWD set to the fastlane/ dir, so a
+# CWD-relative File.expand_path("UnArchiver/…") resolves to fastlane/UnArchiver/…
+# — wrong. Anchor every repo-file reference here instead. On CI this is the
+# checkout root (GITHUB_WORKSPACE); locally, the parent of this Fastfile's directory.
+REPO_ROOT = ENV["GITHUB_WORKSPACE"] || File.expand_path("..", __dir__)
+
+# Declared entitlements — each target's source of truth, verified in the built
+# IPA before upload. These are wired into the build as CODE_SIGN_ENTITLEMENTS via
+# project.yml, not with XcodeGen's `entitlements:` key, which would generate
+# over them (see docs/FASTLANE-MIGRATION.md).
+APP_ENTITLEMENTS      = File.join(REPO_ROOT, "UnArchiver/UnArchiver.entitlements")
+SHAREEXT_ENTITLEMENTS = File.join(REPO_ROOT, "ShareExtension/ShareExtension.entitlements")
+ENTITLEMENTS_TOOL     = File.join(REPO_ROOT, "scripts/entitlements.py")
+
+platform :ios do
+  desc "Sync signing material (read-only on CI) without building anything"
+  lane :certificates do
+    # force: true so this also creates a dedicated, password-known keychain when
+    # run locally (e.g. seeding from a Mac). Without it, match installs into the
+    # login keychain and can't run `security set-key-partition-list`
+    # non-interactively — the identity never forms and match reports "could not
+    # find the newly generated certificate installed" (errSecInternalComponent).
+    setup_ci(force: true)
+    match(api_key: asc_api_key, type: "appstore", readonly: FastlaneCore::Helper.ci?)
+  end
+
+  desc "Build and upload a signed build to TestFlight"
+  lane :beta do
+    setup_ci
+    key = asc_api_key
+    ipa = build_signed_ipa(key)
+    upload_to_testflight(
+      api_key: key,
+      ipa: ipa,
+      # Internal testers only — don't submit for external Beta App Review, and
+      # don't block CI while App Store Connect processes the build.
+      skip_submission: true,
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end
+
+# Sync signing, produce a signed App-Store IPA, verify it carries every declared
+# entitlement, and return its absolute path (for upload_to_testflight).
+# MARKETING_VERSION comes from release.yml (the tag); build number from the CI
+# run number.
+def build_signed_ipa(key)
+  # readonly by default. To regenerate profiles from CI after changing App-ID
+  # capabilities (instead of re-seeding from a Mac), run the "Bump version and
+  # make a release" workflow with match_readonly: 'false' — that plumbs
+  # MATCH_READONLY through release.yml to here. Needs a *write* deploy key in
+  # MATCH_REPO_KEY and an API key allowed to manage profiles.
+  match(api_key: key, type: "appstore", readonly: ENV["MATCH_READONLY"] != "false")
+
+  # Stamp manual signing + the match profiles into the freshly generated project,
+  # so project.yml carries no signing settings (a source of the XcodeGen pain).
+  apply_signing(APP_TARGET,      ENV.fetch("sigh_#{APP_ID}_appstore_profile-name"))
+  apply_signing(SHAREEXT_TARGET, ENV.fetch("sigh_#{SHAREEXT_ID}_appstore_profile-name"))
+
+  marketing_version = ENV["MARKETING_VERSION"] || "0.0.1"
+  build_number = ENV["GITHUB_RUN_NUMBER"] || "1"
+
+  # Archive and export in one step. Each target's CODE_SIGN_ENTITLEMENTS points at
+  # its checked-in .entitlements file, and match's profiles authorise those
+  # capabilities, so the exported IPA carries them — no post-export re-signing
+  # needed. The gate below is what proves it on every release.
+  build_app(
+    project: PROJECT,
+    scheme: SCHEME,
+    configuration: "Release",
+    clean: true,
+    output_directory: File.join(REPO_ROOT, "build"),
+    output_name: "UnArchiver.ipa",
+    export_method: "app-store",
+    export_options: {
+      method: "app-store",
+      signingStyle: "manual",
+      teamID: ENV.fetch("APPLE_TEAM_ID"),
+      signingCertificate: "Apple Distribution",
+      provisioningProfiles: {
+        APP_ID      => ENV.fetch("sigh_#{APP_ID}_appstore_profile-name"),
+        SHAREEXT_ID => ENV.fetch("sigh_#{SHAREEXT_ID}_appstore_profile-name"),
+      },
+    },
+    xcargs: [
+      "MARKETING_VERSION=#{marketing_version}",
+      "CURRENT_PROJECT_VERSION=#{build_number}",
+      "DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')}",
+    ].join(" "),
+  )
+  ipa = Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::IPA_OUTPUT_PATH]
+
+  # Gate: fail before upload if any declared entitlement is missing from the
+  # shipped signature or its embedded provisioning profile.
+  verify_declared_entitlements(ipa)
+  ipa
+end
+
+# Inspect the exported IPA and fail unless the app and the Share Extension
+# carry every key/value their .entitlements file declares — in BOTH the code
+# signature AND the embedded provisioning profile. Raises (failing the lane) via
+# scripts/entitlements.py, which exits non-zero on a missing entry.
+#
+# This gate is the safety net for the whole signing path: if the App Group is
+# missing from the shipped binary, the Share Extension can't hand a file off to
+# the main app (containerURL(forSecurityApplicationGroupIdentifier:) returns
+# nil). Catching it here means a broken build fails the release instead of
+# reaching TestFlight.
+#
+# The two-place check matters: a capability in the signature is necessary but NOT
+# sufficient. At runtime iOS grants an entitlement only if the embedded
+# provisioning profile also authorises it, so a build can carry the App Group in
+# its signature yet still get nil on device. match manages profiles but NOT
+# App-ID capabilities, so if App Groups isn't associated on the App IDs the
+# minted profiles silently omit it. This turns that into a build-time failure.
+def verify_declared_entitlements(ipa)
+  tool          = ENTITLEMENTS_TOOL
+  app_ent       = APP_ENTITLEMENTS
+  shareext_ent  = SHAREEXT_ENTITLEMENTS
+  sh(<<~BASH)
+    set -euo pipefail
+    IPA="#{ipa}"
+    WORK="$(mktemp -d)"
+    unzip -qo "$IPA" -d "$WORK"
+    APP="$(ls -d "$WORK/Payload/"*.app | head -1)"
+    check() {
+      bundle="$1"; declared="$2"
+      # 1. Code signature must carry every declared entitlement.
+      ent="$(mktemp)"
+      codesign -d --entitlements :- "$bundle" > "$ent" 2>/dev/null || true
+      plutil -convert xml1 "$ent" 2>/dev/null || true
+      echo "----- signature entitlements: $(basename "$bundle") -----"
+      plutil -p "$ent" 2>/dev/null || cat "$ent"
+      python3 "#{tool}" check "$ent" "$declared"
+      # Parser-independent backstop: grep the normalised dump for every declared
+      # group string as well as comparing plists, so a parsing quirk in either
+      # tool can't turn a missing App Group into a pass.
+      groups="$(mktemp)"
+      grep -oE 'group\\.[A-Za-z0-9._-]+' "$declared" | sort -u > "$groups" || true
+      while IFS= read -r grp; do
+        [ -z "$grp" ] && continue
+        grep -q "$grp" "$ent" || { echo "::error::$(basename "$bundle"): shipped signature is missing App Group '$grp' — the Share Extension hand-off would fail (nil App Group container)."; exit 1; }
+      done < "$groups"
+      echo "OK: $(basename "$bundle") signature carries every declared entitlement"
+
+      # 2. Embedded provisioning profile must AUTHORISE every declared
+      #    (capability) entitlement — else iOS strips it at runtime.
+      prof="$(mktemp)"; prof_ent="$(mktemp)"
+      security cms -D -i "$bundle/embedded.mobileprovision" > "$prof" 2>/dev/null
+      /usr/libexec/PlistBuddy -x -c "Print :Entitlements" "$prof" > "$prof_ent"
+      echo "----- provisioning-profile entitlements: $(basename "$bundle") -----"
+      plutil -p "$prof_ent" 2>/dev/null || cat "$prof_ent"
+      if ! python3 "#{tool}" check "$prof_ent" "$declared"; then
+        echo "::error::$(basename "$bundle"): its embedded provisioning profile does NOT authorise a declared entitlement (e.g. the App Group). iOS will strip it at runtime. Enable the App Groups capability (with group.fi.mailhub.unarchiver) on BOTH App IDs in the Developer portal, then regenerate the match profiles (MATCH_READONLY=false, or 'fastlane match appstore --force')."
+        exit 1
+      fi
+      echo "OK: $(basename "$bundle") profile authorises every declared entitlement"
+    }
+    check "$APP" "#{app_ent}"
+    for ext in "$APP/PlugIns/"*.appex; do
+      [ -e "$ext" ] && check "$ext" "#{shareext_ent}"
+    done
+  BASH
+end
+
+# App Store Connect API key from the existing repo secrets. key_content is the
+# raw .p8 text (not base64), matching how APP_STORE_CONNECT_API_KEY_P8 is stored.
+def asc_api_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+    issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+    key_content: ENV.fetch("APP_STORE_CONNECT_API_KEY_P8"),
+    is_key_content_base64: false,
+    in_house: false, # standard Developer Program, NOT enterprise
+  )
+end
+
+def apply_signing(target, profile_name)
+  update_code_signing_settings(
+    path: PROJECT,
+    use_automatic_signing: false,
+    team_id: ENV.fetch("APPLE_TEAM_ID"),
+    code_sign_identity: "Apple Distribution",
+    profile_name: profile_name,
+    targets: [target],
+    build_configurations: ["Release"],
+  )
+end
