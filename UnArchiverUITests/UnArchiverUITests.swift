@@ -137,10 +137,11 @@ final class TextViewerLoadingTests: TextViewerTestBase {
         attachment.name = "Share action result"
         attachment.lifetime = .keepAlways
         add(attachment)
+        let hierarchy = app.debugDescription.replacingOccurrences(of: "\n", with: " | ")
         XCTAssertTrue(
             activitySheet.waitForExistence(timeout: 5),
             "Sharing a loaded text file must present the system activity sheet. "
-                + "UI hierarchy after tapping Share:\n\(app.debugDescription)"
+                + "UI hierarchy after tapping Share: \(hierarchy)"
         )
     }
 }
