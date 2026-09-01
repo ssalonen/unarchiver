@@ -133,6 +133,10 @@ final class TextViewerLoadingTests: TextViewerTestBase {
         shareButton.tap()
 
         let activitySheet = app.sheets.firstMatch
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "Share action result"
+        attachment.lifetime = .keepAlways
+        add(attachment)
         XCTAssertTrue(
             activitySheet.waitForExistence(timeout: 5),
             "Sharing a loaded text file must present the system activity sheet. "
