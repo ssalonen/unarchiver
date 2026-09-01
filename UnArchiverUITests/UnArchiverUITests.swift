@@ -132,9 +132,11 @@ final class TextViewerLoadingTests: TextViewerTestBase {
 
         shareButton.tap()
 
+        let activitySheet = app.sheets.firstMatch
         XCTAssertTrue(
-            app.sheets.firstMatch.waitForExistence(timeout: 5),
-            "Sharing a loaded text file must present the system activity sheet"
+            activitySheet.waitForExistence(timeout: 5),
+            "Sharing a loaded text file must present the system activity sheet. "
+                + "UI hierarchy after tapping Share:\n\(app.debugDescription)"
         )
     }
 }
