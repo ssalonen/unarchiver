@@ -347,7 +347,12 @@ struct TextViewerView: View {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         try? content.data(using: .utf8)?.write(to: url)
         shareItem = url
-        showingShare = true
+        // A sheet request made in the same update as a Menu action can be
+        // discarded while UIKit is dismissing that menu. Schedule it for the
+        // next main-loop turn after the menu has finished dismissing.
+        DispatchQueue.main.async {
+            showingShare = true
+        }
     }
 
     private func buildHexDump(_ data: Data) -> String {
