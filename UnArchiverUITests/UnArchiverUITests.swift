@@ -123,6 +123,27 @@ final class TextViewerLoadingTests: TextViewerTestBase {
         fontSizeMenuButton.tap()
         XCTAssertTrue(app.buttons["Share"].waitForExistence(timeout: 3))
     }
+
+    func testShareButtonPresentsActivitySheet() {
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        let shareButton = app.buttons["Share"]
+        XCTAssertTrue(shareButton.waitForExistence(timeout: 3))
+
+        shareButton.tap()
+
+        let activitySheet = app.sheets.firstMatch
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "Share action result"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        let hierarchy = app.debugDescription.replacingOccurrences(of: "\n", with: " | ")
+        XCTAssertTrue(
+            activitySheet.waitForExistence(timeout: 5),
+            "Sharing a loaded text file must present the system activity sheet. "
+                + "UI hierarchy after tapping Share: \(hierarchy)"
+        )
+    }
 }
 
 // MARK: - Word wrap behavioral tests

@@ -42,8 +42,7 @@ struct TextViewerView: View {
     @State private var fontSize: CGFloat = 13
     @State private var searchText = ""
     @State private var matchCount = 0
-    @State private var shareItem: URL?
-    @State private var showingShare = false
+    @State private var shareItem: ShareItem?
     @State private var viewMode: ViewMode = .text
     @State private var isAutoformatted = false
     @State private var wordWrap: Bool = true
@@ -86,8 +85,8 @@ struct TextViewerView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarItems }
         .task { await loadContent() }
-        .sheet(isPresented: $showingShare) {
-            if let item = shareItem { ShareSheet(items: [item as Any]) }
+        .sheet(item: $shareItem) { item in
+            ShareSheet(items: [item.url as Any])
         }
     }
 
@@ -346,8 +345,11 @@ struct TextViewerView: View {
             : source.displayName
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         try? content.data(using: .utf8)?.write(to: url)
-        shareItem = url
-        showingShare = true
+        // A Menu is still dismissing when its action runs. Presenting a sheet in
+        // that transition is dropped, so wait for the dismissal to complete.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            shareItem = ShareItem(url: url)
+        }
     }
 
     private func buildHexDump(_ data: Data) -> String {
@@ -370,4 +372,9 @@ struct TextViewerView: View {
         }
         return lines.joined(separator: "\n")
     }
+}
+
+private struct ShareItem: Identifiable {
+    let id = UUID()
+    let url: URL
 }
