@@ -366,12 +366,21 @@ jobs:
           path: coverage.json
           if-no-files-found: ignore
 
-      - name: Upload UI test result bundle on failure
+      - name: Export failing UI test attachments
+        if: failure()
+        run: |
+          mkdir -p .build/ui-test-attachments
+          xcrun xcresulttool export attachments \
+            --path .build/ui-tests.xcresult \
+            --output-path .build/ui-test-attachments \
+            --only-failures || true
+
+      - name: Upload failing UI test attachments
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: ui-test-results
-          path: .build/ui-tests.xcresult
+          name: ui-test-attachments
+          path: .build/ui-test-attachments
           if-no-files-found: ignore
 
   # ── Auto-release on green main ─────────────────────────────────────────────
