@@ -345,7 +345,11 @@ struct TextViewerView: View {
             : source.displayName
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         try? content.data(using: .utf8)?.write(to: url)
-        shareItem = ShareItem(url: url)
+        // A Menu is still dismissing when its action runs. Presenting a sheet in
+        // that transition is dropped, so wait for the dismissal to complete.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            shareItem = ShareItem(url: url)
+        }
     }
 
     private func buildHexDump(_ data: Data) -> String {
