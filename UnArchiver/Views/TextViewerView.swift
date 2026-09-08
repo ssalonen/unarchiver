@@ -338,6 +338,7 @@ struct TextViewerView: View {
     }
 
     private func handleShare() {
+        print("[DEBUG-share-97] menu action invoked")
         let content = displayedContent
         let filename = viewMode == .hex
             ? source.displayName + ".hex.txt"
@@ -358,19 +359,26 @@ struct TextViewerView: View {
         // dismissing. Present the activity controller from the app's active
         // UIKit view controller after that transition instead.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            guard let window = UIApplication.shared.connectedScenes
+            let windows = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
                 .flatMap(\.windows)
-                .first(where: \.isKeyWindow),
+            print("[DEBUG-share-97] delayed presentation; windows=\(windows.count), keys=\(windows.filter(\.isKeyWindow).count)")
+            guard let window = windows.first(where: \.isKeyWindow),
                   let root = window.rootViewController
-            else { return }
+            else {
+                print("[DEBUG-share-97] no presentation window")
+                return
+            }
 
             let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
             var presenter = root
             while let presented = presenter.presentedViewController {
                 presenter = presented
             }
-            presenter.present(activity, animated: true)
+            print("[DEBUG-share-97] presenting from \(type(of: presenter))")
+            presenter.present(activity, animated: true) {
+                print("[DEBUG-share-97] activity presentation completed")
+            }
         }
     }
 
