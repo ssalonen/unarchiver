@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum ContentSource {
     case archive(ArchiveEntry, ArchiveFile)
@@ -42,7 +43,7 @@ struct TextViewerView: View {
     @State private var fontSize: CGFloat = 13
     @State private var searchText = ""
     @State private var matchCount = 0
-    @State private var shareItem: ShareItem?
+
     @State private var viewMode: ViewMode = .text
     @State private var isAutoformatted = false
     @State private var wordWrap: Bool = true
@@ -85,9 +86,7 @@ struct TextViewerView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarItems }
         .task { await loadContent() }
-        .sheet(item: $shareItem) { item in
-            ShareSheet(items: [item.url as Any])
-        }
+
     }
 
     // MARK: - Toolbar
@@ -344,11 +343,33 @@ struct TextViewerView: View {
             ? source.displayName + ".hex.txt"
             : source.displayName
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-        try? content.data(using: .utf8)?.write(to: url)
-        // A Menu is still dismissing when its action runs. Presenting a sheet in
-        // that transition is dropped, so wait for the dismissal to complete.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            shareItem = ShareItem(url: url)
+        guard let data = content.data(using: .utf8) else {
+            loadError = "Could not prepare this file for sharing."
+            return
+        }
+        do {
+            try data.write(to: url)
+        } catch {
+            loadError = "Could not prepare this file for sharing: \(error.localizedDescription)"
+            return
+        }
+
+        // SwiftUI drops a sheet requested by a Menu action while the menu is
+        // dismissing. Present the activity controller from the app's active
+        // UIKit view controller after that transition instead.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            guard let scene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first(where: { $0.activationState == .foregroundActive }),
+                  let root = scene.windows.first(where: \.isKeyWindow)?.rootViewController
+            else { return }
+
+            let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+            var presenter = root
+            while let presented = presenter.presentedViewController {
+                presenter = presented
+            }
+            presenter.present(activity, animated: true)
         }
     }
 
@@ -372,9 +393,4 @@ struct TextViewerView: View {
         }
         return lines.joined(separator: "\n")
     }
-}
-
-private struct ShareItem: Identifiable {
-    let id = UUID()
-    let url: URL
 }
