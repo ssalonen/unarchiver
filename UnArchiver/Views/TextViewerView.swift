@@ -358,10 +358,11 @@ struct TextViewerView: View {
         // dismissing. Present the activity controller from the app's active
         // UIKit view controller after that transition instead.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            guard let scene = UIApplication.shared.connectedScenes
+            guard let window = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
-                .first(where: { $0.activationState == .foregroundActive }),
-                  let root = scene.windows.first(where: \.isKeyWindow)?.rootViewController
+                .flatMap(\.windows)
+                .first(where: \.isKeyWindow),
+                  let root = window.rootViewController
             else { return }
 
             let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
