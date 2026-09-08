@@ -372,8 +372,7 @@ jobs:
           mkdir -p .build/ui-test-attachments
           xcrun xcresulttool export attachments \
             --path .build/ui-tests.xcresult \
-            --output-path .build/ui-test-attachments \
-            --only-failures || true
+            --output-path .build/ui-test-attachments || true
 
       - name: Upload failing UI test attachments
         if: failure()
