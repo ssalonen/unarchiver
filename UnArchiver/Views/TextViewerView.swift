@@ -44,6 +44,7 @@ struct TextViewerView: View {
     @State private var searchText = ""
     @State private var matchCount = 0
     @State private var shareActionReached = false
+    @State private var sharePresentationStage = "idle"
 
     @State private var viewMode: ViewMode = .text
     @State private var isAutoformatted = false
@@ -85,8 +86,12 @@ struct TextViewerView: View {
         }
         .overlay(alignment: .top) {
             if shareActionReached {
-                Text("Share action reached")
-                    .accessibilityIdentifier("shareActionReached")
+                VStack {
+                    Text("Share action reached")
+                        .accessibilityIdentifier("shareActionReached")
+                    Text("Share stage: \(sharePresentationStage)")
+                        .accessibilityIdentifier("sharePresentationStage")
+                }
             }
         }
         .navigationTitle(source.displayName)
@@ -346,7 +351,7 @@ struct TextViewerView: View {
 
     private func handleShare() {
         shareActionReached = true
-        print("[DEBUG-share-97] menu action invoked")
+        sharePresentationStage = "action"
         let content = displayedContent
         let filename = viewMode == .hex
             ? source.displayName + ".hex.txt"
@@ -367,14 +372,14 @@ struct TextViewerView: View {
         // dismissing. Present the activity controller from the app's active
         // UIKit view controller after that transition instead.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            sharePresentationStage = "locating window"
             let windows = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
                 .flatMap(\.windows)
-            print("[DEBUG-share-97] delayed presentation; windows=\(windows.count), keys=\(windows.filter(\.isKeyWindow).count)")
             guard let window = windows.first(where: \.isKeyWindow),
                   let root = window.rootViewController
             else {
-                print("[DEBUG-share-97] no presentation window")
+                sharePresentationStage = "no key window"
                 return
             }
 
@@ -383,9 +388,9 @@ struct TextViewerView: View {
             while let presented = presenter.presentedViewController {
                 presenter = presented
             }
-            print("[DEBUG-share-97] presenting from \(type(of: presenter))")
+            sharePresentationStage = "presenting"
             presenter.present(activity, animated: true) {
-                print("[DEBUG-share-97] activity presentation completed")
+                sharePresentationStage = "presented"
             }
         }
     }
