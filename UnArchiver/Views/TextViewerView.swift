@@ -368,30 +368,40 @@ struct TextViewerView: View {
             return
         }
 
-        // SwiftUI drops a sheet requested by a Menu action while the menu is
-        // dismissing. Present the activity controller from the app's active
-        // UIKit view controller after that transition instead.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            sharePresentationStage = "locating window"
-            let windows = UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene })
-                .flatMap(\.windows)
-            guard let window = windows.first(where: \.isKeyWindow),
-                  let root = window.rootViewController
-            else {
-                sharePresentationStage = "no key window"
+        // The toolbar Menu owns a transient UIKit presentation. Wait until it
+        // has fully dismissed before presenting the activity controller.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            presentShareActivity(url, attemptsRemaining: 20)
+        }
+    }
+
+    private func presentShareActivity(_ url: URL, attemptsRemaining: Int) {
+        sharePresentationStage = "locating window"
+        let windows = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap(\.windows)
+        guard let window = windows.first(where: \.isKeyWindow),
+              let root = window.rootViewController
+        else {
+            sharePresentationStage = "no key window"
+            return
+        }
+        guard root.presentedViewController == nil else {
+            guard attemptsRemaining > 0 else {
+                sharePresentationStage = "menu did not dismiss"
                 return
             }
+            sharePresentationStage = "waiting for menu"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                presentShareActivity(url, attemptsRemaining: attemptsRemaining - 1)
+            }
+            return
+        }
 
-            let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-            var presenter = root
-            while let presented = presenter.presentedViewController {
-                presenter = presented
-            }
-            sharePresentationStage = "presenting"
-            presenter.present(activity, animated: true) {
-                sharePresentationStage = "presented"
-            }
+        let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        sharePresentationStage = "presenting"
+        root.present(activity, animated: true) {
+            sharePresentationStage = "presented"
         }
     }
 
