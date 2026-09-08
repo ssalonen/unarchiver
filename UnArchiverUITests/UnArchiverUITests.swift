@@ -137,16 +137,10 @@ final class TextViewerLoadingTests: TextViewerTestBase {
             "Tapping Share must invoke the app action"
         )
 
-        let activitySheet = app.sheets.firstMatch
-        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        attachment.name = "Share action result"
-        attachment.lifetime = .keepAlways
-        add(attachment)
-        let hierarchy = app.debugDescription.replacingOccurrences(of: "\n", with: " | ")
+        let activityController = app.otherElements["shareActivityController"]
         XCTAssertTrue(
-            activitySheet.waitForExistence(timeout: 5),
-            "Sharing a loaded text file must present the system activity sheet. "
-                + "UI hierarchy after tapping Share: \(hierarchy)"
+            activityController.waitForExistence(timeout: 5),
+            "Sharing a loaded text file must present the system activity controller."
         )
     }
 }

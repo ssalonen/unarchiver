@@ -399,6 +399,7 @@ struct TextViewerView: View {
         }
 
         let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        activity.view.accessibilityIdentifier = "shareActivityController"
         sharePresentationStage = "presenting"
         root.present(activity, animated: true) {
             sharePresentationStage = "presented"
