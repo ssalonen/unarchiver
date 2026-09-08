@@ -132,6 +132,11 @@ final class TextViewerLoadingTests: TextViewerTestBase {
 
         shareButton.tap()
 
+        XCTAssertTrue(
+            app.staticTexts["shareActionReached"].waitForExistence(timeout: 2),
+            "Tapping Share must invoke the app action"
+        )
+
         let activitySheet = app.sheets.firstMatch
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "Share action result"

@@ -43,6 +43,7 @@ struct TextViewerView: View {
     @State private var fontSize: CGFloat = 13
     @State private var searchText = ""
     @State private var matchCount = 0
+    @State private var shareActionReached = false
 
     @State private var viewMode: ViewMode = .text
     @State private var isAutoformatted = false
@@ -80,6 +81,12 @@ struct TextViewerView: View {
                 }
             } else if rawData != nil {
                 textContent(displayedContent)
+            }
+        }
+        .overlay(alignment: .top) {
+            if shareActionReached {
+                Text("Share action reached")
+                    .accessibilityIdentifier("shareActionReached")
             }
         }
         .navigationTitle(source.displayName)
@@ -338,6 +345,7 @@ struct TextViewerView: View {
     }
 
     private func handleShare() {
+        shareActionReached = true
         print("[DEBUG-share-97] menu action invoked")
         let content = displayedContent
         let filename = viewMode == .hex
