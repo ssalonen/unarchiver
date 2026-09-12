@@ -123,6 +123,28 @@ final class TextViewerLoadingTests: TextViewerTestBase {
         fontSizeMenuButton.tap()
         XCTAssertTrue(app.buttons["Share"].waitForExistence(timeout: 3))
     }
+
+    func testShareButtonPresentsActivitySheet() {
+        XCTAssertTrue(fontSizeMenuButton.waitForExistence(timeout: 5))
+        fontSizeMenuButton.tap()
+        let shareButton = app.buttons["Share"]
+        XCTAssertTrue(shareButton.waitForExistence(timeout: 3))
+
+        shareButton.tap()
+
+        XCTAssertTrue(
+            app.staticTexts["shareActionReached"].waitForExistence(timeout: 2),
+            "Tapping Share must invoke the app action"
+        )
+
+        let presentationStage = app.staticTexts["sharePresentationStage"]
+        XCTAssertTrue(presentationStage.waitForExistence(timeout: 2))
+        let presented = expectation(
+            for: NSPredicate(format: "label == %@", "Share stage: presented"),
+            evaluatedWith: presentationStage
+        )
+        wait(for: [presented], timeout: 5)
+    }
 }
 
 // MARK: - Word wrap behavioral tests

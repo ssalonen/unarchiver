@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum ContentSource {
     case archive(ArchiveEntry, ArchiveFile)
@@ -42,8 +43,9 @@ struct TextViewerView: View {
     @State private var fontSize: CGFloat = 13
     @State private var searchText = ""
     @State private var matchCount = 0
-    @State private var shareItem: URL?
-    @State private var showingShare = false
+    @State private var shareActionReached = false
+    @State private var sharePresentationStage = "idle"
+
     @State private var viewMode: ViewMode = .text
     @State private var isAutoformatted = false
     @State private var wordWrap: Bool = true
@@ -51,6 +53,10 @@ struct TextViewerView: View {
 
     private enum PreviewMode: String, CaseIterable {
         case source, rendered
+    }
+
+    private var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("--uitesting") }
     }
 
     private var isMarkdown: Bool { language == "markdown" && viewMode == .text }
@@ -82,13 +88,21 @@ struct TextViewerView: View {
                 textContent(displayedContent)
             }
         }
+        .overlay(alignment: .top) {
+            if isUITesting && shareActionReached {
+                VStack {
+                    Text("Share action reached")
+                        .accessibilityIdentifier("shareActionReached")
+                    Text("Share stage: \(sharePresentationStage)")
+                        .accessibilityIdentifier("sharePresentationStage")
+                }
+            }
+        }
         .navigationTitle(source.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarItems }
         .task { await loadContent() }
-        .sheet(isPresented: $showingShare) {
-            if let item = shareItem { ShareSheet(items: [item as Any]) }
-        }
+
     }
 
     // MARK: - Toolbar
@@ -340,14 +354,59 @@ struct TextViewerView: View {
     }
 
     private func handleShare() {
+        shareActionReached = true
+        sharePresentationStage = "action"
         let content = displayedContent
         let filename = viewMode == .hex
             ? source.displayName + ".hex.txt"
             : source.displayName
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-        try? content.data(using: .utf8)?.write(to: url)
-        shareItem = url
-        showingShare = true
+        guard let data = content.data(using: .utf8) else {
+            loadError = "Could not prepare this file for sharing."
+            return
+        }
+        do {
+            try data.write(to: url)
+        } catch {
+            loadError = "Could not prepare this file for sharing: \(error.localizedDescription)"
+            return
+        }
+
+        // The toolbar Menu owns a transient UIKit presentation. Wait until it
+        // has fully dismissed before presenting the activity controller.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            presentShareActivity(url, attemptsRemaining: 20)
+        }
+    }
+
+    private func presentShareActivity(_ url: URL, attemptsRemaining: Int) {
+        sharePresentationStage = "locating window"
+        let windows = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap(\.windows)
+        guard let window = windows.first(where: \.isKeyWindow),
+              let root = window.rootViewController
+        else {
+            sharePresentationStage = "no key window"
+            return
+        }
+        guard root.presentedViewController == nil else {
+            guard attemptsRemaining > 0 else {
+                sharePresentationStage = "menu did not dismiss"
+                return
+            }
+            sharePresentationStage = "waiting for menu"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                presentShareActivity(url, attemptsRemaining: attemptsRemaining - 1)
+            }
+            return
+        }
+
+        let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        sharePresentationStage = "presenting"
+        root.present(activity, animated: true) {
+            sharePresentationStage = "presented"
+        }
     }
 
     private func buildHexDump(_ data: Data) -> String {
