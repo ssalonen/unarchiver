@@ -55,6 +55,10 @@ struct TextViewerView: View {
         case source, rendered
     }
 
+    private var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("--uitesting") }
+    }
+
     private var isMarkdown: Bool { language == "markdown" && viewMode == .text }
 
     @AppStorage("showWhitespaceIndicators") private var showWhitespace = false
@@ -85,7 +89,7 @@ struct TextViewerView: View {
             }
         }
         .overlay(alignment: .top) {
-            if shareActionReached {
+            if isUITesting && shareActionReached {
                 VStack {
                     Text("Share action reached")
                         .accessibilityIdentifier("shareActionReached")
@@ -399,7 +403,6 @@ struct TextViewerView: View {
         }
 
         let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-        activity.view.accessibilityIdentifier = "shareActivityController"
         sharePresentationStage = "presenting"
         root.present(activity, animated: true) {
             sharePresentationStage = "presented"
