@@ -126,7 +126,17 @@ jobs:
       # Sync signing (match), archive, export, verify the shipped IPA carries
       # every declared entitlement, and upload to TestFlight — all in the beta lane.
       - name: Build & upload to TestFlight
-        run: bundle exec fastlane beta
+        run: |
+          # Fastlane's useful failure is usually a late "[!]" line, which the
+          # Actions runner otherwise reduces to "Process completed with exit code 1".
+          # Keep the full log visible, then emit one actionable file annotation.
+          set -o pipefail
+          log="$RUNNER_TEMP/fastlane-beta.log"
+          if bundle exec fastlane beta 2>&1 | tee "$log"; then
+            exit 0
+          fi
+          python3 scripts/fastlane_failure_annotation.py "$log"
+          exit 1
 
   # ── Changelog, version bump, GitHub Release (git-only, cheap ubuntu) ────────
   # Runs only after a successful upload, so a failed build never bumps the
