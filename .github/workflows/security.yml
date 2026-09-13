@@ -281,8 +281,21 @@ jobs:
           # the Ruby arm) and multi_json is "JSON AND MIT". Both the component
           # licenses (Ruby, JSON) and the literal expressions are listed so it
           # passes whether the action parses the expression or matches it
-          # literally. These are all the licenses present across the Swift
+          # literally.
+          #
+          # Artistic-1.0-Perl and OFL-1.1 come from rdoc, which enters the tree
+          # transitively (fastlane -> irb -> rdoc). GitHub scans every file in a
+          # gem and ANDs what it finds, so rdoc is reported as "(Artistic-1.0-Perl
+          # AND BSD-3-Clause AND MIT AND OFL-1.1 AND Ruby) OR (BSD-3-Clause AND
+          # GPL-1.0-or-later AND MIT AND OFL-1.1 AND Ruby)" and neither arm is
+          # satisfiable without those two. In rdoc they cover two fonts in its
+          # HTML doc templates (OFL) and one markdown test fixture (Artistic);
+          # its own gemspec is "Ruby OR GPL-2.0-only" and we take the Ruby arm,
+          # so the GPL side of that expression is deliberately NOT listed. rdoc
+          # is a CI-only tool and is never linked into or shipped with the app.
+          #
+          # These are all the licenses present across the Swift
           # dependencies and the fastlane toolchain — every one permissive.
           # Gems whose license GitHub can't detect are skipped by the action,
           # not failed.
-          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, MPL-2.0, Ruby, JSON, GPL-2.0-only OR Ruby, JSON AND MIT
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, MPL-2.0, Ruby, JSON, Artistic-1.0-Perl, OFL-1.1, GPL-2.0-only OR Ruby, JSON AND MIT
