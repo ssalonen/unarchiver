@@ -390,21 +390,25 @@ struct TextViewerView: View {
             sharePresentationStage = "no key window"
             return
         }
-        guard root.presentedViewController == nil else {
-            guard attemptsRemaining > 0 else {
-                sharePresentationStage = "menu did not dismiss"
+        var presenter = root
+        while let presented = presenter.presentedViewController {
+            if presented.isBeingDismissed || presented.transitionCoordinator != nil {
+                guard attemptsRemaining > 0 else {
+                    sharePresentationStage = "menu did not dismiss"
+                    return
+                }
+                sharePresentationStage = "waiting for menu"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    presentShareActivity(url, attemptsRemaining: attemptsRemaining - 1)
+                }
                 return
             }
-            sharePresentationStage = "waiting for menu"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                presentShareActivity(url, attemptsRemaining: attemptsRemaining - 1)
-            }
-            return
+            presenter = presented
         }
 
         let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         sharePresentationStage = "presenting"
-        root.present(activity, animated: true) {
+        presenter.present(activity, animated: true) {
             sharePresentationStage = "presented"
         }
     }
