@@ -11,6 +11,8 @@ build/
 
 # fastlane
 vendor/
+# Local fastlane env: holds the App Store Connect private key
+fastlane/.env
 fastlane/report.xml
 fastlane/README.md
 *.ipa
