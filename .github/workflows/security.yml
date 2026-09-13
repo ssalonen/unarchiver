@@ -38,7 +38,7 @@ jobs:
         run: xcodegen generate
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v4.37.4
         with:
           languages: swift
           # Catch common issues: injection, unsafe deserialization, path traversal, etc.
@@ -80,7 +80,7 @@ jobs:
             ENABLE_TESTABILITY=NO
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@v4.37.4
         with:
           category: "/language:swift"
 
