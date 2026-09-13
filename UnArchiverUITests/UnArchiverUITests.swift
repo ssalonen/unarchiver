@@ -137,13 +137,11 @@ final class TextViewerLoadingTests: TextViewerTestBase {
             "Tapping Share must invoke the app action"
         )
 
-        let presentationStage = app.staticTexts["sharePresentationStage"]
-        XCTAssertTrue(presentationStage.waitForExistence(timeout: 2))
-        let presented = expectation(
-            for: NSPredicate(format: "label == %@", "Share stage: presented"),
-            evaluatedWith: presentationStage
+        let activityList = app.otherElements["ActivityListView"]
+        XCTAssertTrue(
+            activityList.waitForExistence(timeout: 5),
+            "Sharing a loaded text file must show the system activity list"
         )
-        wait(for: [presented], timeout: 5)
     }
 }
 
