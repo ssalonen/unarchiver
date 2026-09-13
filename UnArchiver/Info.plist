@@ -90,6 +90,8 @@
             <string>GZip Compressed TAR Archive</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>org.gnu.gnu-tar-gzip-archive</string>
@@ -107,6 +109,8 @@
             <string>BZip2 Compressed TAR Archive</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>org.bzip2.bzip2-archive</string>
@@ -125,6 +129,8 @@
             <string>TAR Archive</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>public.tar-archive</string>
@@ -142,6 +148,8 @@
             <string>GZip File</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>org.gnu.gnu-zip-archive</string>
@@ -160,6 +168,8 @@
             <string>XZ Compressed TAR Archive</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>org.tukaani.xz-archive</string>
@@ -178,6 +188,8 @@
             <string>ZIP Archive</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>public.zip-archive</string>
@@ -194,6 +206,8 @@
             <string>Text File</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>public.plain-text</string>
