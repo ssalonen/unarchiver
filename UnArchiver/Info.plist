@@ -65,6 +65,16 @@
     <string>Automatic</string>
 
     <!-- ============================================================
+         Export compliance
+         ============================================================ -->
+    <!-- The app performs no encryption: no CryptoKit/CommonCrypto usage, no
+         network connections, and SWCompression does not decrypt archives.
+         Declaring this up front avoids the "Missing Compliance" prompt in
+         App Store Connect on every build. -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+
+    <!-- ============================================================
          URL scheme for inter-app communication with Share Extension
          ============================================================ -->
     <key>CFBundleURLTypes</key>

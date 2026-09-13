@@ -94,6 +94,12 @@ record, generating an API key, seeding `match`, adding repo secrets). See
 [`docs/FASTLANE-MIGRATION.md`](docs/FASTLANE-MIGRATION.md) for the full
 walkthrough.
 
+**Export compliance:** the app declares `ITSAppUsesNonExemptEncryption = false`
+in its `Info.plist`, so builds reach TestFlight without the "Missing Compliance"
+prompt. The app supports many compression formats but performs no cryptography —
+see [`docs/EXPORT-COMPLIANCE.md`](docs/EXPORT-COMPLIANCE.md) for the evidence
+behind that declaration and how to re-verify it after a dependency bump.
+
 **Local development signing:** once `match` is seeded, run
 `bundle exec fastlane certificates` to get the exact same cert + profiles as
 CI — no portal clicking needed.
