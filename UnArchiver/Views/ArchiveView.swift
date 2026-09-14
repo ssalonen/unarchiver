@@ -34,15 +34,9 @@ struct ArchiveView: View {
         }
         .sheet(item: $previewItem) { item in
             NavigationStack {
-                QuickLookPreviewView(url: item.url)
-                    .ignoresSafeArea()
-                    .navigationTitle(item.url.lastPathComponent)
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") { previewItem = nil }
-                        }
-                    }
+                AssetPreviewView(url: item.url) {
+                    previewItem = nil
+                }
             }
         }
         .sheet(isPresented: Binding(

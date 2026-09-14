@@ -145,6 +145,36 @@ final class TextViewerLoadingTests: TextViewerTestBase {
     }
 }
 
+// MARK: - Asset preview sharing
+
+final class AssetPreviewSharingTests: XCTestCase {
+    private var app: XCUIApplication!
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launchArguments = ["--uitesting-asset"]
+        app.launch()
+    }
+
+    override func tearDownWithError() throws { app = nil }
+
+    func testQuickLookAssetHasShareButtonThatPresentsActivityList() {
+        let shareButton = app.buttons["Share"]
+        XCTAssertTrue(
+            shareButton.waitForExistence(timeout: 5),
+            "A previewed asset must expose Share"
+        )
+
+        shareButton.tap()
+
+        XCTAssertTrue(
+            app.otherElements["ActivityListView"].waitForExistence(timeout: 5),
+            "Sharing a previewed asset must show the system activity list"
+        )
+    }
+}
+
 // MARK: - Word wrap behavioral tests
 //
 // Uses --uitesting-lorem: 50 lines × ~450 chars per line.
