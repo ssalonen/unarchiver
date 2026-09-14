@@ -7,7 +7,7 @@ struct UnArchiverApp: App {
 
     private static let uitestArgs: Set<String> = [
         "--uitesting", "--uitesting-json", "--uitesting-xml", "--uitesting-markdown",
-        "--uitesting-lorem", "--uitesting-mdlong"
+        "--uitesting-lorem", "--uitesting-mdlong", "--uitesting-asset"
     ]
     private var isUITesting: Bool {
         !ProcessInfo.processInfo.arguments.filter { Self.uitestArgs.contains($0) }.isEmpty
@@ -44,8 +44,21 @@ private struct UITestRootView: View {
 
     var body: some View {
         NavigationStack {
-            TextViewerView(source: source)
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-asset") {
+                AssetPreviewView(url: assetURL, onDone: {})
+            } else {
+                TextViewerView(source: source)
+            }
         }
+    }
+
+    private var assetURL: URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("uitest-image.png")
+        // A valid opaque 1×1 PNG keeps this fixture local and deterministic.
+        let png = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL4WAAAAABJRU5ErkJggg==")!
+        try? png.write(to: url)
+        return url
     }
 
     private static func testContent(for args: [String]) -> (String, String) {
