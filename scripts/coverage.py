@@ -96,6 +96,10 @@ def validate_merged(merged, *inputs):
 
 
 def native_merge(output, name, *prefixes):
+    # xccov requires two pairs. Self-merging normalizes a single input without
+    # changing which lines/regions were hit (execution frequencies are unused).
+    if len(prefixes) == 1:
+        prefixes = prefixes * 2
     arguments = []
     for prefix in prefixes:
         arguments.extend([str(prefix.with_suffix(".xccovreport")), str(prefix.with_suffix(".xccovarchive"))])
