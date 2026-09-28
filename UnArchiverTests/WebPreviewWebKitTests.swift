@@ -31,15 +31,23 @@ final class WebPreviewWebKitTests: XCTestCase {
         controller.view = webView
         window.rootViewController = controller
         window.makeKeyAndVisible()
+        let loaded = expectation(description: "Selected document finished loading")
+        coordinator.onFinish = { loaded.fulfill() }
         coordinator.load(webView)
-        try await waitFor("document.readyState === 'complete' && document.body != null")
+        await fulfillment(of: [loaded], timeout: 15)
         XCTAssertEqual(webView.url, document.url)
+    }
+
+    // Inspect from the app's isolated world, not the intentionally disabled
+    // page world. Never enable page scripts to make a security test pass.
+    private func evaluate(_ expression: String) async throws -> Any? {
+        try await webView.evaluateJavaScript(expression, in: nil, in: .defaultClient)
     }
 
     private func waitFor(_ expression: String) async throws {
         for _ in 0..<200 {
             if webView.url != nil,
-               let result = try? await webView.evaluateJavaScript(expression), result as? Bool == true { return }
+               let result = try? await evaluate(expression), result as? Bool == true { return }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
         XCTFail("WebKit condition timed out: \(expression)")
@@ -57,7 +65,7 @@ final class WebPreviewWebKitTests: XCTestCase {
         let document = try XCTUnwrap(source.webPreviewDocument(content: content))
         try await open(document)
         try await waitFor("document.querySelector('#local').naturalWidth === 1 && document.querySelector('#vector').naturalWidth === 32")
-        let heading = try await webView.evaluateJavaScript("document.querySelector('h1').textContent") as? String
+        let heading = try await evaluate("document.querySelector('h1').textContent") as? String
         XCTAssertEqual(heading, "Archive preview")
     }
 
@@ -90,13 +98,13 @@ final class WebPreviewWebKitTests: XCTestCase {
         """
         let document = WebPreviewDocument(content: html, kind: .html, path: "index.html")
         try await open(document, trap: trap)
-        let executed = try await webView.evaluateJavaScript("document.documentElement.dataset.executed || 'no'") as? String
+        let executed = try await evaluate("document.documentElement.dataset.executed || 'no'") as? String
         XCTAssertEqual(executed, "no")
-        let color = try await webView.evaluateJavaScript("getComputedStyle(document.querySelector('h1')).color") as? String
+        let color = try await evaluate("getComputedStyle(document.querySelector('h1')).color") as? String
         XCTAssertEqual(color, "rgb(255, 0, 0)", "Inline CSS should still render")
         XCTAssertFalse(webView.configuration.defaultWebpagePreferences.allowsContentJavaScript)
         XCTAssertFalse(webView.configuration.websiteDataStore.isPersistent)
-        _ = try await webView.evaluateJavaScript("document.querySelector('#link').click(); document.querySelector('#form').submit(); true")
+        _ = try await evaluate("document.querySelector('#link').click(); document.querySelector('#form').submit(); true")
         try await Task.sleep(nanoseconds: 300_000_000)
         XCTAssertEqual(webView.url, document.url)
         XCTAssertEqual(trap.requestCount, 0, "Blocked resources must never reach their scheme handler")
@@ -114,7 +122,7 @@ final class WebPreviewWebKitTests: XCTestCase {
         try await open(WebPreviewDocument(content: svg, kind: .svg, path: "icon.svg"), trap: trap)
         try await waitFor("document.querySelector('img').naturalWidth === 48")
         XCTAssertEqual(trap.requestCount, 0)
-        let scripts = try await webView.evaluateJavaScript("document.scripts.length") as? Int
+        let scripts = try await evaluate("document.scripts.length") as? Int
         XCTAssertEqual(scripts, 0, "SVG markup must stay out of the host document")
     }
 }

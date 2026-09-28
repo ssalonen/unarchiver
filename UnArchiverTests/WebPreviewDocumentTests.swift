@@ -104,4 +104,50 @@ final class WebPreviewDocumentTests: XCTestCase {
             XCTAssertTrue(error is WebPreviewDocument.PreviewError)
         }
     }
+    func testActualImageSizeIsCheckedWhenMetadataUnderstatesIt() async throws {
+        let entry = ArchiveEntry(path: "large.png", size: 1)
+        let document = WebPreviewDocument(content: "", kind: .html, path: "index.html", entries: [entry]) { _ in
+            Data(repeating: 0, count: WebPreviewDocument.maxImageBytes + 1)
+        }
+        do {
+            _ = try await document.resource(at: document.url.deletingLastPathComponent().appendingPathComponent(entry.path))
+            XCTFail("Actual image size must also be bounded")
+        } catch WebPreviewDocument.PreviewError.imageLimit {} catch { XCTFail("Unexpected error: \(error)") }
+    }
+
+    func testImageCountLimitStillAllowsCachedImages() async throws {
+        let entries = (0...WebPreviewDocument.maxImageCount).map {
+            ArchiveEntry(path: "image\($0).png", size: 1)
+        }
+        var extracted = 0
+        let document = WebPreviewDocument(content: "", kind: .html, path: "index.html", entries: entries) { _ in
+            extracted += 1
+            return Data([42])
+        }
+        let root = document.url.deletingLastPathComponent()
+        for entry in entries.dropLast() {
+            _ = try await document.resource(at: root.appendingPathComponent(entry.path))
+        }
+        _ = try await document.resource(at: root.appendingPathComponent(entries[0].path))
+        XCTAssertEqual(extracted, WebPreviewDocument.maxImageCount)
+        do {
+            _ = try await document.resource(at: root.appendingPathComponent(entries.last!.path))
+            XCTFail("Expected image-count limit")
+        } catch WebPreviewDocument.PreviewError.imageLimit {} catch { XCTFail("Unexpected error: \(error)") }
+        XCTAssertEqual(extracted, WebPreviewDocument.maxImageCount)
+    }
+
+    func testTotalImageBudget() async throws {
+        let entries = (0..<4).map { ArchiveEntry(path: "image\($0).png", size: 20 * 1024 * 1024) }
+        let document = WebPreviewDocument(content: "", kind: .html, path: "index.html", entries: entries) { _ in
+            Data(repeating: 0, count: WebPreviewDocument.maxImageBytes)
+        }
+        let root = document.url.deletingLastPathComponent()
+        for entry in entries.prefix(3) { _ = try await document.resource(at: root.appendingPathComponent(entry.path)) }
+        do {
+            _ = try await document.resource(at: root.appendingPathComponent(entries[3].path))
+            XCTFail("Expected aggregate budget to reject the fourth image")
+        } catch WebPreviewDocument.PreviewError.imageLimit {} catch { XCTFail("Unexpected error: \(error)") }
+    }
+
 }

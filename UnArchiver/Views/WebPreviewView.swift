@@ -71,6 +71,7 @@ struct RestrictedWebView: UIViewRepresentable {
         private var lastTask: Task<Void, Never>?
         private var cancelled = false
         private var awaitingInitialNavigation = true
+        var onFinish: (() -> Void)?
 
         init(document: WebPreviewDocument, onError: @escaping (Error) -> Void) {
             self.document = document
@@ -156,6 +157,10 @@ struct RestrictedWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             if (error as NSError).code != NSURLErrorCancelled { onError(error) }
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            onFinish?()
         }
 
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

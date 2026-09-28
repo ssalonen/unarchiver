@@ -7,7 +7,7 @@ struct UnArchiverApp: App {
 
     private static let uitestArgs: Set<String> = [
         "--uitesting", "--uitesting-json", "--uitesting-xml", "--uitesting-markdown",
-        "--uitesting-lorem", "--uitesting-mdlong", "--uitesting-asset"
+        "--uitesting-lorem", "--uitesting-mdlong", "--uitesting-asset", "--uitesting-webarchive"
     ]
     private var isUITesting: Bool {
         !ProcessInfo.processInfo.arguments.filter { Self.uitestArgs.contains($0) }.isEmpty
@@ -16,7 +16,15 @@ struct UnArchiverApp: App {
     var body: some Scene {
         WindowGroup {
             if isUITesting {
+                #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("--uitesting-webarchive") {
+                    WebPreviewUITestRoot()
+                } else {
+                    UITestRootView()
+                }
+                #else
                 UITestRootView()
+                #endif
             } else {
                 ContentView(
                     currentArchive: $appState.currentArchive,
