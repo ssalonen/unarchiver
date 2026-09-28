@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Export xccov executable/covered line sets and union them without double counting."""
+"""Export and merge native Xcode coverage; never average coverage percentages."""
 import argparse
 import hashlib
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 
 
@@ -13,118 +12,140 @@ def command(*args):
     return subprocess.check_output(args, text=True)
 
 
-def parse_lines(text):
-    executable, covered = set(), set()
-    for line in text.splitlines():
-        match = re.fullmatch(r"\s*(\d+):\s*(\d+|\*)(?:\s*\[)?\s*", line)
-        if not match:
-            # xccov also emits subranges such as (column, length, count).
-            if line.strip() and not re.fullmatch(r"\s*(?:\]|\(.*\),?)\s*", line):
-                raise ValueError(f"Unexpected xccov line: {line!r}")
-            continue
-        number, count = match.groups()
-        if count != "*":
-            executable.add(int(number))
-            if int(count) > 0:
-                covered.add(int(number))
-    return executable, covered
-
-
-def export(result, output, suite, root):
-    report = json.loads(command("xcrun", "xccov", "view", "--report", "--json", str(result)))
+def app_report(report):
     targets = [t for t in report["targets"] if t["name"] == "UnArchiver.app"]
     if len(targets) != 1 or not targets[0]["executableLines"]:
         raise ValueError("Expected one instrumented UnArchiver.app target")
+    app = targets[0]
+    for item in [app, *app["files"]]:
+        if not 0 <= item["coveredLines"] <= item["executableLines"]:
+            raise ValueError("Invalid coverage counts")
+    return app
+
+
+def source_manifest(app, root):
     files = {}
-    for file in targets[0]["files"]:
+    for file in app["files"]:
         path = Path(file["path"])
         relative = path.resolve().relative_to(root.resolve()).as_posix()
-        if not relative.startswith("UnArchiver/"):
-            raise ValueError(f"Unexpected app source: {relative}")
-        if relative in files:
-            raise ValueError(f"Duplicate source: {relative}")
-        executable, covered = parse_lines(command(
-            "xcrun", "xccov", "view", "--archive", "--file", str(path), str(result)))
-        if len(executable) != file["executableLines"] or len(covered) != file["coveredLines"]:
-            raise ValueError(f"Line data disagrees with xccov summary for {relative}")
+        if not relative.startswith("UnArchiver/") or relative in files:
+            raise ValueError(f"Unexpected or duplicate app source: {relative}")
         files[relative] = {"sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-                           "executable": sorted(executable), "covered": sorted(covered)}
-    data = {"version": 1, "commit": command("git", "rev-parse", "HEAD").strip(),
-            "suite": suite, "files": files}
-    validate(data)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(data, indent=2) + "\n")
-    output.with_suffix(".xccov.json").write_text(json.dumps(report, indent=2) + "\n")
+                           "executableLines": file["executableLines"]}
+    if not files:
+        raise ValueError("No app source files")
+    return files
 
 
-def validate(data):
-    if data.get("version") != 1 or not data.get("commit") or not data.get("files"):
-        raise ValueError("Missing or invalid coverage data")
-    total = 0
-    for path, file in data["files"].items():
-        executable, covered = set(file["executable"]), set(file["covered"])
-        if not file.get("sha256") or not covered <= executable:
-            raise ValueError(f"Invalid coverage for {path}")
-        if any(type(line) is not int or line <= 0 for line in executable):
-            raise ValueError(f"Invalid line number in {path}")
-        total += len(executable)
-    if total == 0:
-        raise ValueError("No executable app lines")
+def export(result, output, suite, root):
+    output.mkdir(parents=True, exist_ok=True)
+    raw = json.loads(command("xcrun", "xccov", "view", "--report", "--json", str(result)))
+    app = app_report(raw)
+    # Export the native report AND archive: the archive is required to merge
+    # execution data correctly, including overlapping Swift coverage regions.
+    bundle = json.loads(command("xcrun", "xcresulttool", "get", "object", "--legacy",
+                                "--format", "json", "--path", str(result)))
+    actions = [a["actionResult"]["coverage"] for a in bundle["actions"]["_values"]
+               if "reportRef" in a.get("actionResult", {}).get("coverage", {})]
+    if len(actions) != 1 or "archiveRef" not in actions[0]:
+        raise ValueError("Expected one test action with a coverage report and archive")
+    for key, kind, suffix in [("reportRef", "file", "xccovreport"),
+                               ("archiveRef", "directory", "xccovarchive")]:
+        command("xcrun", "xcresulttool", "export", "object", "--legacy", "--type", kind,
+                "--path", str(result), "--id", actions[0][key]["id"]["_value"],
+                "--output-path", str(output / f"{suite}.{suffix}"))
+    metadata = {"version": 1, "commit": command("git", "rev-parse", "HEAD").strip(),
+                "suite": suite, "files": source_manifest(app, root)}
+    (output / f"{suite}.manifest.json").write_text(json.dumps(metadata, indent=2) + "\n")
+    (output / f"{suite}.json").write_text(json.dumps(raw, indent=2) + "\n")
 
 
-def merge(*reports):
-    if not reports:
-        raise ValueError("No coverage inputs")
-    for report in reports:
-        validate(report)
-    first = reports[0]
-    result = {"version": 1, "commit": first["commit"], "files": {}}
-    for report in reports:
-        if report["commit"] != first["commit"] or report["files"].keys() != first["files"].keys():
-            raise ValueError("Coverage inputs must describe the same commit and source files")
-        for path, file in report["files"].items():
-            original = first["files"][path]
-            if file["sha256"] != original["sha256"] or set(file["executable"]) != set(original["executable"]):
-                raise ValueError(f"Source or executable-line mismatch: {path}")
-            merged = result["files"].setdefault(path, {**file, "covered": []})
-            merged["covered"] = sorted(set(merged["covered"]) | set(file["covered"]))
-    return result
+def validate_manifests(manifests):
+    if len(manifests) != 3 or {m.get("suite") for m in manifests} != {"unit", "ui", "ui-scrolling"}:
+        raise ValueError("Require exactly one unit, ui and ui-scrolling input")
+    first = manifests[0]
+    for item in manifests:
+        if (item.get("version") != 1 or not item.get("commit") or not item.get("files")
+                or item["commit"] != first["commit"] or item["files"] != first["files"]):
+            raise ValueError("Coverage inputs must have matching commits, sources and executable counts")
 
 
-def counts(files):
-    return (sum(len(set(f["covered"])) for f in files),
-            sum(len(set(f["executable"])) for f in files))
+def file_map(app):
+    # Native xccov merges using original absolute paths. All jobs check out to
+    # the same repository path. Refuse mismatches instead of silently dropping files.
+    files = {f["path"]: f for f in app["files"]}
+    if len(files) != len(app["files"]):
+        raise ValueError("Duplicate paths in coverage report")
+    return files
 
 
-def percentage(files):
-    hit, total = counts(files)
+def validate_merged(merged, *inputs):
+    merged_files = file_map(merged)
+    for original in inputs:
+        original_files = file_map(original)
+        if merged_files.keys() != original_files.keys():
+            raise ValueError("Merged coverage changed the source file set")
+        for path, file in original_files.items():
+            result = merged_files[path]
+            if (result["executableLines"] != file["executableLines"]
+                    or result["coveredLines"] < file["coveredLines"]):
+                raise ValueError(f"Invalid merged coverage for {path}")
+        if (merged["executableLines"] != original["executableLines"]
+                or merged["coveredLines"] < original["coveredLines"]):
+            raise ValueError("Invalid merged app coverage")
+
+
+def native_merge(output, name, *prefixes):
+    arguments = []
+    for prefix in prefixes:
+        arguments.extend([str(prefix.with_suffix(".xccovreport")), str(prefix.with_suffix(".xccovarchive"))])
+    report = output / f"{name}.xccovreport"
+    command("xcrun", "xccov", "merge", "--outReport", str(report),
+            "--outArchive", str(output / f"{name}.xccovarchive"), *arguments)
+    return json.loads(command("xcrun", "xccov", "view", "--json", str(report)))
+
+
+def percentage(item):
+    hit, total = item["coveredLines"], item["executableLines"]
     return f"{100 * hit / total:.1f}% ({hit}/{total})" if total else "— (0/0)"
 
 
-def summarize(inputs, output):
-    reports = [json.loads(path.read_text()) for path in inputs]
-    by_suite = {r["suite"]: r for r in reports}
-    if len(by_suite) != len(reports) or set(by_suite) != {"unit", "ui", "ui-scrolling"}:
-        raise ValueError("Require exactly one unit, ui and ui-scrolling coverage input")
-    unit = by_suite["unit"]
-    ui = merge(by_suite["ui"], by_suite["ui-scrolling"])
-    combined = merge(unit, ui)
-    columns = [unit, ui, combined]
+def render(reports, commit):
+    columns = [app_report(r) for r in reports]
     lines = ["<!-- coverage-report -->", "## App line coverage", "",
              "| Scope | Coverage (covered/executable lines) |", "|---|---:|"]
-    for name, report in zip(["Unit tests", "UI tests (including scrolling)", "Combined"], columns):
-        lines.append(f"| {name} | {percentage(report['files'].values())} |")
-    lines += ["", "Combined coverage is the union of covered source lines, not an average of percentages.",
+    for name, app in zip(["Unit tests", "UI tests (including scrolling)", "Combined"], columns):
+        lines.append(f"| {name} | {percentage(app)} |")
+    lines += ["", "Combined coverage uses xccov's native execution-data merge; percentages are not averaged or added.",
               "Scope: UnArchiver app target; test bundles, dependencies and the share extension are excluded.",
-              f"Commit: `{combined['commit']}`", "",
-              "| File | Unit | UI | Combined |", "|---|---:|---:|---:|"]
-    for path in sorted(combined["files"]):
-        values = [percentage([r["files"][path]]) for r in columns]
-        lines.append(f"| {path} | {' | '.join(values)} |")
+              f"Commit: `{commit}`", "", "| File | Unit | UI | Combined |", "|---|---:|---:|---:|"]
+    maps = [file_map(app) for app in columns]
+    for path in sorted(maps[2]):
+        # Keep directories to disambiguate files with the same basename.
+        label = "UnArchiver/" + path.rsplit("/UnArchiver/", 1)[1]
+        lines.append(f"| {label} | {' | '.join(percentage(files[path]) for files in maps)} |")
+    return "\n".join(lines) + "\n"
+
+
+def summarize(inputs, output):
+    manifests = [json.loads((inputs / f"{suite}.manifest.json").read_text())
+                 for suite in ["unit", "ui", "ui-scrolling"]]
+    validate_manifests(manifests)
+    raw = {m["suite"]: json.loads((inputs / f"{m['suite']}.json").read_text()) for m in manifests}
+    # Check source paths/counts before invoking native merge as well as after it.
+    for suite in ["ui", "ui-scrolling"]:
+        a, b = file_map(app_report(raw["unit"])), file_map(app_report(raw[suite]))
+        if a.keys() != b.keys() or any(a[p]["executableLines"] != b[p]["executableLines"] for p in a):
+            raise ValueError("Input coverage paths or executable counts differ")
     output.mkdir(parents=True, exist_ok=True)
-    summary = "\n".join(lines) + "\n"
+    ui = native_merge(output, "ui", inputs / "ui", inputs / "ui-scrolling")
+    validate_merged(app_report(ui), app_report(raw["ui"]), app_report(raw["ui-scrolling"]))
+    combined = native_merge(output, "combined", inputs / "unit", output / "ui")
+    validate_merged(app_report(combined), app_report(raw["unit"]), app_report(ui))
+    reports = [raw["unit"], ui, combined]
+    summary = render(reports, manifests[0]["commit"])
     (output / "coverage_comment.md").write_text(summary)
-    for name, report in zip(["unit", "ui", "combined"], columns):
+    for name, report in zip(["unit", "ui", "combined"], reports):
         (output / f"{name}.json").write_text(json.dumps(report, indent=2) + "\n")
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as stream:
@@ -141,7 +162,7 @@ if __name__ == "__main__":
     collector.add_argument("--suite", required=True, choices=["unit", "ui", "ui-scrolling"])
     collector.add_argument("--root", type=Path, default=Path.cwd())
     reporter = commands.add_parser("report")
-    reporter.add_argument("inputs", type=Path, nargs="+")
+    reporter.add_argument("inputs", type=Path)
     reporter.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.action == "export":

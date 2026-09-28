@@ -109,7 +109,7 @@ jobs:
           exit $TEST_EXIT
 
       - name: Export scrolling coverage
-        run: python3 scripts/coverage.py export .build/scrolling-tests.xcresult coverage/ui-scrolling.json --suite ui-scrolling
+        run: python3 scripts/coverage.py export .build/scrolling-tests.xcresult coverage/ --suite ui-scrolling
 
       - name: Upload scrolling coverage
         uses: actions/upload-artifact@v7
@@ -242,7 +242,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Export unit coverage
-        run: python3 scripts/coverage.py export .build/unit-tests.xcresult coverage/unit.json --suite unit
+        run: python3 scripts/coverage.py export .build/unit-tests.xcresult coverage/ --suite unit
 
       - name: Reset simulator app state
         if: always()
@@ -296,7 +296,7 @@ jobs:
             2>&1 | xcbeautify --renderer github-actions
 
       - name: Export UI coverage
-        run: python3 scripts/coverage.py export .build/ui-tests.xcresult coverage/ui.json --suite ui
+        run: python3 scripts/coverage.py export .build/ui-tests.xcresult coverage/ --suite ui
 
       - name: Upload unit and UI coverage
         uses: actions/upload-artifact@v7
@@ -308,10 +308,13 @@ jobs:
   coverage:
     name: Unit, UI and combined coverage
     needs: [build, word-wrap]
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Select Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
 
       - name: Download coverage inputs
         uses: actions/download-artifact@v8
@@ -322,9 +325,7 @@ jobs:
 
       - name: Calculate separate and combined coverage
         run: |
-          python3 scripts/coverage.py report \
-            coverage-inputs/unit.json coverage-inputs/ui.json coverage-inputs/ui-scrolling.json \
-            --output coverage-report
+          python3 scripts/coverage.py report coverage-inputs --output coverage-report
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
