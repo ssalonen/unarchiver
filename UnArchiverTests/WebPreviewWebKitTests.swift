@@ -26,11 +26,15 @@ final class WebPreviewWebKitTests: XCTestCase {
         if let trap { config.setURLSchemeHandler(trap, forURLScheme: "preview-trap") }
         webView = RestrictedWebView.makeWebView(coordinator: coordinator, configuration: config)
         // Attach the web view so WebKit is not suspended in a background test.
-        window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
+        webView.frame = window.bounds
         let controller = UIViewController()
         controller.view = webView
         window.rootViewController = controller
         window.makeKeyAndVisible()
+        controller.view.layoutIfNeeded()
         let loaded = expectation(description: "Selected document finished loading")
         coordinator.onFinish = { loaded.fulfill() }
         coordinator.load(webView)
@@ -70,6 +74,11 @@ final class WebPreviewWebKitTests: XCTestCase {
             }
             try await Task.sleep(nanoseconds: 100_000_000)
         }
+        let snapshot = try await webView.takeSnapshot(configuration: nil)
+        let attachment = XCTAttachment(image: snapshot)
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        print("Preview snapshot: \(snapshot.size), web view: \(webView.bounds), scene: \(String(describing: webView.window?.windowScene?.activationState))")
         XCTFail("Expected the fixture's red pixels in the rendered preview")
     }
 
