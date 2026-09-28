@@ -41,7 +41,7 @@ final class WebPreviewWebKitTests: XCTestCase {
     // Inspect from the app's isolated world, not the intentionally disabled
     // page world. Never enable page scripts to make a security test pass.
     private func evaluate(_ expression: String) async throws -> Any? {
-        try await webView.evaluateJavaScript(expression, in: nil, in: .defaultClient)
+        try await webView.evaluateJavaScript(expression, in: nil, contentWorld: .defaultClient)
     }
 
     private func waitFor(_ expression: String) async throws {
