@@ -51,8 +51,8 @@ class CoverageTests(unittest.TestCase):
             validate_merged(app_report(invalid), app_report(report(2)))
 
     def test_native_merge_always_supplies_execution_archives(self):
-        with patch("coverage.command", side_effect=["", json.dumps(report(3))]) as run:
-            result = native_merge(Path("out"), "combined", Path("in/unit"), Path("in/ui"))
+        with tempfile.TemporaryDirectory() as tmp, patch("coverage.command", side_effect=["", json.dumps(report(3))]) as run:
+            result = native_merge(Path(tmp), "combined", Path("in/unit"), Path("in/ui"))
         self.assertEqual(result, report(3))
         args = run.call_args_list[0].args
         self.assertEqual(args[-4:], ("in/unit.xccovreport", "in/unit.xccovarchive", "in/ui.xccovreport", "in/ui.xccovarchive"))

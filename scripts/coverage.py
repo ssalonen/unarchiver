@@ -89,7 +89,7 @@ def validate_merged(merged, *inputs):
             result = merged_files[path]
             if (result["executableLines"] != file["executableLines"]
                     or result["coveredLines"] < file["coveredLines"]):
-                raise ValueError(f"Invalid merged coverage for {path}")
+                raise ValueError(f"Invalid merged coverage for {path}: input {file['coveredLines']}/{file['executableLines']}, merged {result['coveredLines']}/{result['executableLines']}")
         if (merged["executableLines"] != original["executableLines"]
                 or merged["coveredLines"] < original["coveredLines"]):
             raise ValueError("Invalid merged app coverage")
@@ -102,7 +102,9 @@ def native_merge(output, name, *prefixes):
     report = output / f"{name}.xccovreport"
     command("xcrun", "xccov", "merge", "--outReport", str(report),
             "--outArchive", str(output / f"{name}.xccovarchive"), *arguments)
-    return json.loads(command("xcrun", "xccov", "view", "--json", str(report)))
+    result = json.loads(command("xcrun", "xccov", "view", "--json", str(report)))
+    (output / f"{name}.json").write_text(json.dumps(result, indent=2) + "\n")
+    return result
 
 
 def percentage(item):
@@ -116,7 +118,7 @@ def render(reports, commit):
              "| Scope | Coverage (covered/executable lines) |", "|---|---:|"]
     for name, app in zip(["Unit tests", "UI tests (including scrolling)", "Combined"], columns):
         lines.append(f"| {name} | {percentage(app)} |")
-    lines += ["", "Combined coverage uses xccov's native execution-data merge; percentages are not averaged or added.",
+    lines += ["", "All inputs are normalized through xccov merge before calculating unit, UI and combined coverage; percentages are not averaged or added.",
               "Scope: UnArchiver app target; test bundles, dependencies and the share extension are excluded.",
               f"Commit: `{commit}`", "", "| File | Unit | UI | Combined |", "|---|---:|---:|---:|"]
     maps = [file_map(app) for app in columns]
@@ -138,11 +140,20 @@ def summarize(inputs, output):
         if a.keys() != b.keys() or any(a[p]["executableLines"] != b[p]["executableLines"] for p in a):
             raise ValueError("Input coverage paths or executable counts differ")
     output.mkdir(parents=True, exist_ok=True)
-    ui = native_merge(output, "ui", inputs / "ui", inputs / "ui-scrolling")
-    validate_merged(app_report(ui), app_report(raw["ui"]), app_report(raw["ui-scrolling"]))
-    combined = native_merge(output, "combined", inputs / "unit", output / "ui")
-    validate_merged(app_report(combined), app_report(raw["unit"]), app_report(ui))
-    reports = [raw["unit"], ui, combined]
+    # Xcode's original summaries can count overlapping Swift function regions
+    # differently from xccov merge. Normalize EVERY input through the same native
+    # merger before comparing counts or presenting the three coverage scopes.
+    normalized = {}
+    for suite in ["unit", "ui", "ui-scrolling"]:
+        name = "normalized-" + suite
+        normalized[suite] = native_merge(output, name, inputs / suite)
+        before, after = app_report(raw[suite]), app_report(normalized[suite])
+        print(f"Normalize {suite}: {percentage(before)} -> {percentage(after)}")
+    ui = native_merge(output, "ui", output / "normalized-ui", output / "normalized-ui-scrolling")
+    validate_merged(app_report(ui), app_report(normalized["ui"]), app_report(normalized["ui-scrolling"]))
+    combined = native_merge(output, "combined", output / "normalized-unit", output / "ui")
+    validate_merged(app_report(combined), app_report(normalized["unit"]), app_report(ui))
+    reports = [normalized["unit"], ui, combined]
     summary = render(reports, manifests[0]["commit"])
     (output / "coverage_comment.md").write_text(summary)
     for name, report in zip(["unit", "ui", "combined"], reports):
