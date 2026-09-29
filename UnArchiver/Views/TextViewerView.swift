@@ -14,6 +14,21 @@ enum ContentSource {
 
     var fileName: String { displayName }
 
+    @MainActor
+    func webPreviewDocument(content: String) -> WebPreviewDocument? {
+        guard let kind = WebPreviewDocument.Kind(filename: fileName) else { return nil }
+        switch self {
+        case .archive(let entry, let archive):
+            return WebPreviewDocument(content: content, kind: kind, path: entry.path,
+                                      entries: archive.entries) { entry in
+                try await archive.extractEntry(entry)
+            }
+        case .file:
+            // A standalone file never gains access to neighbouring local files.
+            return WebPreviewDocument(content: content, kind: kind, path: fileName)
+        }
+    }
+
     func load() async throws -> Data {
         switch self {
         case .archive(let entry, let archive):
@@ -36,6 +51,7 @@ struct TextViewerView: View {
 
     @State private var decodedText: String?
     @State private var rawData: Data?
+    @State private var webDocument: WebPreviewDocument?
     @State private var hexContent = ""
     @State private var loadError: String?
     @State private var isLoading = true
@@ -85,7 +101,25 @@ struct TextViewerView: View {
                     Text(error)
                 }
             } else if rawData != nil {
-                textContent(displayedContent)
+                if viewMode == .text, let webDocument {
+                    VStack(spacing: 0) {
+                        Picker("View", selection: $previewMode) {
+                            Text("Preview").tag(PreviewMode.rendered)
+                            Text("Source").tag(PreviewMode.source)
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .accessibilityIdentifier("webPreviewModePicker")
+                        if previewMode == .rendered {
+                            WebPreviewView(document: webDocument)
+                        } else {
+                            textContent(displayedContent)
+                        }
+                    }
+                } else {
+                    textContent(displayedContent)
+                }
             }
         }
         .overlay(alignment: .top) {
@@ -291,7 +325,7 @@ struct TextViewerView: View {
                 .padding(.vertical, 6)
                 .background(Color(.secondarySystemBackground))
             }
-            if previewMode == .rendered {
+            if isMarkdown && previewMode == .rendered {
                 MarkdownPreviewView(markdown: content, fontSize: fontSize)
             } else {
                 syntaxTextView(content)
@@ -346,6 +380,9 @@ struct TextViewerView: View {
 
             if decodedText == nil || TextDetector.looksLikeBinary(data) {
                 viewMode = .hex
+            } else if let decodedText {
+                webDocument = source.webPreviewDocument(content: decodedText)
+                if webDocument != nil { previewMode = .rendered }
             }
         } catch {
             loadError = error.localizedDescription

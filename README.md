@@ -24,6 +24,26 @@ app is public, install it from the App Store.
 - **Share Sheet** — share any archive from Mail, Safari, etc. and tap UnArchiver
 - **Share Extension** — appears in every app's share sheet
 
+## HTML and SVG previews
+
+HTML (`.html` / `.htm`) and SVG files open in a rendered preview, with a
+**Preview / Source** switch and the existing hex and share actions. This also
+works inside supported archives and single-file compression such as `.html.gz`
+or `.svg.xz`.
+
+HTML can display images from the **same archive**: for example,
+`pages/index.html` can reference `../images/photo.png`. Relative paths,
+archive-root paths, URL-encoded filenames, inline images and inline CSS work.
+ZIP images are decompressed on demand; no archive is extracted to a web-accessible
+folder. Missing or blocked images leave the rest of the document readable.
+
+Previews are offline and passive: JavaScript (including event handlers), remote
+assets, linked stylesheets/fonts, frames, forms and navigation are blocked.
+SVG uses image rendering, so its scripts and external references are disabled.
+Standalone HTML has no access to neighbouring files. Archive image loading is
+limited to 128 images, 20 MiB per image and 64 MiB total. Source and sharing keep
+the original markup; the restrictions apply to the in-app preview.
+
 ## Build from source
 
 Requires Xcode 15+ and macOS 13+, plus [XcodeGen](https://github.com/yonaskolb/XcodeGen).
