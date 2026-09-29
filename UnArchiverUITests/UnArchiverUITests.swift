@@ -1318,3 +1318,50 @@ private extension XCUIElement {
         typeText(delete)
     }
 }
+
+
+// MARK: - Offline HTML / SVG previews (included in UI coverage)
+
+final class WebDocumentPreviewUITests: XCTestCase {
+    private var app: XCUIApplication!
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launchArguments = ["--uitesting-webarchive"]
+        app.launch()
+    }
+
+    func testCompressedHTMLPreviewSourceAndHex() {
+        let entry = app.buttons.containing(.staticText, identifier: "index.html").firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 10))
+        entry.tap()
+        let heading = app.webViews.staticTexts["Offline archive page"]
+        XCTAssertTrue(heading.waitForExistence(timeout: 15))
+        XCTAssertFalse(app.webViews.staticTexts["Unsafe script ran"].exists)
+        XCTAssertTrue(app.webViews.images["Local archive pixel"].exists)
+        XCTAssertTrue(app.webViews.images["Local archive vector"].exists)
+        XCTAssertTrue(app.webViews.staticTexts["End of offline page"].exists)
+
+        app.segmentedControls.buttons["Source"].tap()
+        XCTAssertTrue(app.waitForCodeTextView())
+        app.buttons["hexToggleButton"].tap()
+        XCTAssertTrue(app.codeTextView.exists)
+        app.buttons["hexToggleButton"].tap()
+        app.segmentedControls.buttons["Preview"].tap()
+        XCTAssertTrue(heading.waitForExistence(timeout: 15))
+        app.buttons["Done"].tap()
+        XCTAssertTrue(entry.waitForExistence(timeout: 5))
+    }
+
+    func testCompressedSVGPreviewAndSource() {
+        let entry = app.buttons.containing(.staticText, identifier: "icon.svg").firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 10))
+        entry.tap()
+        XCTAssertTrue(app.webViews.images["SVG preview"].waitForExistence(timeout: 15))
+        app.segmentedControls.buttons["Source"].tap()
+        XCTAssertTrue(app.waitForCodeTextView())
+        app.segmentedControls.buttons["Preview"].tap()
+        XCTAssertTrue(app.webViews.images["SVG preview"].waitForExistence(timeout: 15))
+    }
+}

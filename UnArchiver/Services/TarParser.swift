@@ -23,7 +23,9 @@ enum TarParser {
         var longLinkBuffer: String? = nil
 
         while offset + 512 <= data.count {
-            let headerBytes = data[offset ..< offset + 512]
+            // Data slices preserve their original indices; the header parser
+            // indexes from zero, including for every header after the first.
+            let headerBytes = data.subdata(in: offset ..< offset + 512)
 
             // End-of-archive: two consecutive all-zero 512-byte blocks
             if headerBytes.allSatisfy({ $0 == 0 }) {
