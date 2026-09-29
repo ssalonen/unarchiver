@@ -7,7 +7,8 @@ struct UnArchiverApp: App {
 
     private static let uitestArgs: Set<String> = [
         "--uitesting", "--uitesting-json", "--uitesting-xml", "--uitesting-markdown",
-        "--uitesting-lorem", "--uitesting-mdlong", "--uitesting-asset", "--uitesting-webarchive"
+        "--uitesting-lorem", "--uitesting-mdlong", "--uitesting-asset", "--uitesting-webarchive",
+        "--uitesting-websecurity"
     ]
     private var isUITesting: Bool {
         !ProcessInfo.processInfo.arguments.filter { Self.uitestArgs.contains($0) }.isEmpty
@@ -19,6 +20,8 @@ struct UnArchiverApp: App {
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--uitesting-webarchive") {
                     WebPreviewUITestRoot()
+                } else if ProcessInfo.processInfo.arguments.contains("--uitesting-websecurity") {
+                    WebPreviewSecurityUITestRoot()
                 } else {
                     UITestRootView()
                 }
