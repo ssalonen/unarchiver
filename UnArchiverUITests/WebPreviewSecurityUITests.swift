@@ -4,6 +4,7 @@ import Network
 final class WebPreviewSecurityUITests: XCTestCase {
     private var app: XCUIApplication!
     private var server: PreviewHTTPServer!
+    private var previewWebViewCount = 0
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -32,6 +33,13 @@ final class WebPreviewSecurityUITests: XCTestCase {
         ]
         app.launch()
         XCTAssertTrue(app.webViews.staticTexts["Security fixture"].waitForExistence(timeout: 15))
+        if !control {
+            // WebKit exposes nested accessibility web areas for one WKWebView.
+            // Detect additional windows relative to the loaded preview, rather
+            // than assuming a one-to-one mapping to XCUIElementType.webView.
+            previewWebViewCount = app.webViews.count
+            XCTAssertGreaterThan(previewWebViewCount, 0)
+        }
     }
 
     private func waitForRequests(_ requests: Set<String>) {
@@ -51,7 +59,7 @@ final class WebPreviewSecurityUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [leaked], timeout: 2), .completed,
                        "Preview contacted HTTP server: \(server.requests)")
         XCTAssertEqual(app.state, .runningForeground)
-        XCTAssertEqual(app.webViews.count, 1, "No popup should be created")
+        XCTAssertEqual(app.webViews.count, previewWebViewCount, "No popup should be created")
         XCTAssertTrue(app.webViews.staticTexts["Security fixture"].exists)
         XCTAssertFalse(app.webViews.staticTexts["HTTP destination reached"].exists)
     }
