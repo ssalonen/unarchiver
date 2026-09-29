@@ -88,6 +88,27 @@ release, and the version is bumped accordingly:
 Trivial commits never cut a release, which keeps version numbers meaningful
 and avoids unnecessary macOS build minutes and TestFlight uploads.
 
+### Code coverage
+
+CI reports **unit**, **UI**, and **combined** app line coverage in the PR comment
+and job summary. UI coverage includes both the main UI suite and the separate
+word-wrap/scrolling job. Combined coverage uses `xccov merge` on native reports and execution archives;
+overlapping execution is merged and percentages are never averaged or added.
+
+The scope is the `UnArchiver` app target, excluding test bundles, dependencies,
+and the share extension. Merging requires the same commit, source hashes, file paths and executable
+counts. The merged file set and counts are checked against every input, and
+missing coverage fails CI. Failed tests are never accepted as a
+successful profiling run.
+
+Download the `coverage-report` artifact for `unit.json`, `ui.json`,
+`combined.json` and the Markdown report. The input artifacts also retain the raw
+xccov summaries. Run the reporting regression tests locally with:
+
+```bash
+python3 -m unittest discover -s scripts -p 'test_*.py'
+```
+
 ### Manual / forced release
 
 To force a specific bump regardless of commit messages, run the **“Bump version
