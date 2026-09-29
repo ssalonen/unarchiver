@@ -226,6 +226,9 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             2>&1 | xcbeautify --renderer github-actions
 
+      - name: Test XCTest log validation
+        run: python3 -m unittest discover -s scripts -p test_check_xctest_log.py
+
       - name: Run unit tests
         run: |
           set +e
@@ -247,6 +250,8 @@ jobs:
             2>&1 | tee /tmp/unit-tests.log
           UNIT_EXIT=${PIPESTATUS[0]}
           set -e
+          # Do not suppress TEST EXECUTE FAILED: it also covers real crashes
+          # and assertion failures, not just profiler-harvest errors.
           python3 scripts/check_xctest_log.py /tmp/unit-tests.log "$UNIT_EXIT"
 
       - name: Upload unit test diagnostics
@@ -258,7 +263,6 @@ jobs:
             /tmp/unit-tests.log
             .build/unit-tests.xcresult
           if-no-files-found: ignore
-
       - name: Export unit coverage
         run: python3 scripts/coverage.py export .build/unit-tests.xcresult coverage/ --suite unit
 
