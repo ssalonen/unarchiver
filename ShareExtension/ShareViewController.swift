@@ -98,7 +98,10 @@ final class ShareViewController: UIViewController {
                 DispatchQueue.main.async { self.done(error: "Could not obtain file URL") }
                 return
             }
-            let destURL = containerURL.appendingPathComponent(sourceURL.lastPathComponent)
+            let destURL = SharedContainerFile.destinationURL(
+                in: containerURL,
+                sourceName: sourceURL.lastPathComponent
+            )
             do {
                 _ = sourceURL.startAccessingSecurityScopedResource()
                 if fm.fileExists(atPath: destURL.path) {

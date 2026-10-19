@@ -76,6 +76,7 @@ targets:
       - path: ShareExtension
         excludes:
           - "**/*.orig"
+      - path: UnArchiver/Services/SharedContainerFile.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fi.mailhub.unarchiver.shareextension
