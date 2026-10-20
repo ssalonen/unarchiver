@@ -136,6 +136,9 @@ schemes:
       config: Debug
     test:
       config: Debug
+      gatherCoverageData: true
+      coverageTargets:
+        - UnArchiver
       targets:
         - UnArchiverUITests
     profile:
@@ -153,6 +156,9 @@ schemes:
       config: Debug
     test:
       config: Debug
+      gatherCoverageData: true
+      coverageTargets:
+        - UnArchiver
       targets:
         - UnArchiverTests
     profile:
