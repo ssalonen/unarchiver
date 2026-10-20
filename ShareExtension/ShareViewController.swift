@@ -39,29 +39,9 @@ final class ShareViewController: UIViewController {
             return
         }
 
-        let supportedTypes: [String] = [
-            UTType.zip.identifier,
-            UTType.gzip.identifier,
-            "public.tar-archive",
-            "public.gzip-archive",
-            "org.gnu.gnu-tar-gzip-archive",
-            "org.gnu.gnu-zip-archive",
-            "org.bzip2.bzip2-archive",
-            "public.bzip2-archive",
-            "public.plain-text",
-            "public.text",
-            "public.source-code",
-            "public.script",
-            "public.shell-script",
-            "public.json",
-            "public.xml",
-            "public.yaml",
-            "public.data",          // fallback for unrecognised types
-        ]
-
         for item in items {
             for provider in (item.attachments ?? []) {
-                for typeId in supportedTypes {
+                for typeId in FileTypeRecognition.shareTypeIdentifiers {
                     if provider.hasItemConformingToTypeIdentifier(typeId) {
                         loadItem(provider: provider, typeId: typeId)
                         return

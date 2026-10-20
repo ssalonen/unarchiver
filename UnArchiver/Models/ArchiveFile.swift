@@ -57,15 +57,16 @@ enum ArchiveType: String, CaseIterable {
     case unknown = "Unknown"
 
     static func detect(url: URL) -> ArchiveType {
-        let name = url.lastPathComponent.lowercased()
-        if name.hasSuffix(".tar.gz") || name.hasSuffix(".tgz") { return .tarGzip }
-        if name.hasSuffix(".tar.bz2") || name.hasSuffix(".tbz2") || name.hasSuffix(".tar.bz") { return .tarBzip2 }
-        if name.hasSuffix(".tar.xz") || name.hasSuffix(".txz") { return .tarXZ }
-        if name.hasSuffix(".tar") { return .tar }
-        if name.hasSuffix(".gz") { return .gzip }
-        if name.hasSuffix(".xz") { return .xz }
-        if name.hasSuffix(".zip") { return .zip }
-        if name.hasSuffix(".ipa") { return .ipa }
-        return .unknown
+        switch FileTypeRecognition.archiveKind(for: url.lastPathComponent) {
+        case .gzip: return .gzip
+        case .tar: return .tar
+        case .tarGzip: return .tarGzip
+        case .tarBzip2: return .tarBzip2
+        case .tarXZ: return .tarXZ
+        case .xz: return .xz
+        case .zip: return .zip
+        case .ipa: return .ipa
+        case nil: return .unknown
+        }
     }
 }

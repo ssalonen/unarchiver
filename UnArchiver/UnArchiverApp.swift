@@ -198,21 +198,30 @@ enum SupportedTypes {
         ?? UTType(mimeType: "application/x-tar")
         ?? .data
 
-    static let all: [UTType] = [
-        .gzip,
-        .zip,
-        tarUTType,
-        UTType(filenameExtension: "tgz")            ?? .gzip,
-        UTType(filenameExtension: "tbz2")           ?? .data,
-        UTType(filenameExtension: "bz2")            ?? .data,
-        UTType(mimeType: "application/x-tar")       ?? .data,
-        UTType(mimeType: "application/gzip")        ?? .gzip,
-        UTType(mimeType: "application/x-bzip2")     ?? .data,
-        UTType(filenameExtension: "xz")             ?? .data,
-        UTType(filenameExtension: "txz")            ?? .data,
-        UTType(mimeType: "application/x-xz")        ?? .data,
-        UTType(filenameExtension: "ipa")             ?? .data,
-    ].uniqued()
+    static let all: [UTType] = (
+        [
+            .gzip,
+            .zip,
+            tarUTType,
+        ] + FileTypeRecognition.importableTypes.map { type in
+            if let filenameExtension = type.filenameExtension {
+                return UTType(filenameExtension: filenameExtension) ?? type.fallback.utType
+            }
+            if let mimeType = type.mimeType {
+                return UTType(mimeType: mimeType) ?? type.fallback.utType
+            }
+            return type.fallback.utType
+        }
+    ).uniqued()
+}
+
+private extension FileTypeRecognition.FallbackType {
+    var utType: UTType {
+        switch self {
+        case .data: return .data
+        case .gzip: return .gzip
+        }
+    }
 }
 
 extension Array where Element: Hashable {
