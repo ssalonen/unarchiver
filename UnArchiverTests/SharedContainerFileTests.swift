@@ -67,6 +67,19 @@ final class SharedContainerFileTests: XCTestCase {
         )
     }
 
+    func testSafeSuffix_reducesTraversalStyleNamesToFixedEnumCases() {
+        XCTAssertEqual(FileTypeRecognition.safeSuffix(for: "../../outside.zip"), .zip)
+        XCTAssertEqual(FileTypeRecognition.safeSuffix(for: "payload/../../outside"), .bin)
+
+        let destination = SharedContainerFile.destinationURL(
+            in: containerURL,
+            sourceName: "payload/../../outside.zip",
+            identifier: identifier
+        )
+
+        XCTAssertEqual(destination.lastPathComponent, "shared-01234567-89ab-cdef-0123-456789abcdef.zip")
+    }
+
     func testDestinationURL_usesBinForUnrecognizedSuffix() {
         let destination = SharedContainerFile.destinationURL(
             in: containerURL,
