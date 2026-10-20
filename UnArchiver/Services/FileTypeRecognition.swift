@@ -15,8 +15,60 @@ enum FileTypeRecognition {
         case ipa
     }
 
+    /// A fixed filename suffix used for files copied into the shared container.
+    /// Its literal is selected only from this closed set, never from a provider name.
+    enum SafeSuffix {
+        case tarGzip
+        case tgz
+        case tarBzip2
+        case tbz2
+        case tarBz
+        case tarXZ
+        case txz
+        case tar
+        case gzip
+        case xz
+        case zip
+        case ipa
+        case text
+        case json
+        case xml
+        case yaml
+        case yml
+        case html
+        case htm
+        case svg
+        case bin
+
+        var literal: String {
+            switch self {
+            case .tarGzip: return ".tar.gz"
+            case .tgz: return ".tgz"
+            case .tarBzip2: return ".tar.bz2"
+            case .tbz2: return ".tbz2"
+            case .tarBz: return ".tar.bz"
+            case .tarXZ: return ".tar.xz"
+            case .txz: return ".txz"
+            case .tar: return ".tar"
+            case .gzip: return ".gz"
+            case .xz: return ".xz"
+            case .zip: return ".zip"
+            case .ipa: return ".ipa"
+            case .text: return ".txt"
+            case .json: return ".json"
+            case .xml: return ".xml"
+            case .yaml: return ".yaml"
+            case .yml: return ".yml"
+            case .html: return ".html"
+            case .htm: return ".htm"
+            case .svg: return ".svg"
+            case .bin: return ".bin"
+            }
+        }
+    }
+
     struct ArchiveSuffix {
-        let suffix: String
+        let suffix: SafeSuffix
         let kind: ArchiveKind
     }
 
@@ -32,22 +84,22 @@ enum FileTypeRecognition {
     }
 
     static let archiveSuffixes: [ArchiveSuffix] = [
-        .init(suffix: ".tar.gz", kind: .tarGzip),
-        .init(suffix: ".tgz", kind: .tarGzip),
-        .init(suffix: ".tar.bz2", kind: .tarBzip2),
-        .init(suffix: ".tbz2", kind: .tarBzip2),
-        .init(suffix: ".tar.bz", kind: .tarBzip2),
-        .init(suffix: ".tar.xz", kind: .tarXZ),
-        .init(suffix: ".txz", kind: .tarXZ),
-        .init(suffix: ".tar", kind: .tar),
-        .init(suffix: ".gz", kind: .gzip),
-        .init(suffix: ".xz", kind: .xz),
-        .init(suffix: ".zip", kind: .zip),
-        .init(suffix: ".ipa", kind: .ipa),
+        .init(suffix: .tarGzip, kind: .tarGzip),
+        .init(suffix: .tgz, kind: .tarGzip),
+        .init(suffix: .tarBzip2, kind: .tarBzip2),
+        .init(suffix: .tbz2, kind: .tarBzip2),
+        .init(suffix: .tarBz, kind: .tarBzip2),
+        .init(suffix: .tarXZ, kind: .tarXZ),
+        .init(suffix: .txz, kind: .tarXZ),
+        .init(suffix: .tar, kind: .tar),
+        .init(suffix: .gzip, kind: .gzip),
+        .init(suffix: .xz, kind: .xz),
+        .init(suffix: .zip, kind: .zip),
+        .init(suffix: .ipa, kind: .ipa),
     ]
 
-    static let preservedNonArchiveSuffixes = [
-        ".txt", ".json", ".xml", ".yaml", ".yml", ".html", ".htm", ".svg",
+    static let preservedNonArchiveSuffixes: [SafeSuffix] = [
+        .text, .json, .xml, .yaml, .yml, .html, .htm, .svg,
     ]
 
     static let shareTypeIdentifiers = [
@@ -87,14 +139,14 @@ enum FileTypeRecognition {
 
     static func archiveKind(for filename: String) -> ArchiveKind? {
         let lowercaseFilename = filename.lowercased()
-        return archiveSuffixes.first { lowercaseFilename.hasSuffix($0.suffix) }?.kind
+        return archiveSuffixes.first { lowercaseFilename.hasSuffix($0.suffix.literal) }?.kind
     }
 
-    static func safeSuffix(for filename: String) -> String {
+    static func safeSuffix(for filename: String) -> SafeSuffix {
         let lowercaseFilename = filename.lowercased()
-        if let archiveSuffix = archiveSuffixes.first(where: { lowercaseFilename.hasSuffix($0.suffix) }) {
+        if let archiveSuffix = archiveSuffixes.first(where: { lowercaseFilename.hasSuffix($0.suffix.literal) }) {
             return archiveSuffix.suffix
         }
-        return preservedNonArchiveSuffixes.first(where: { lowercaseFilename.hasSuffix($0) }) ?? ".bin"
+        return preservedNonArchiveSuffixes.first(where: { lowercaseFilename.hasSuffix($0.literal) }) ?? .bin
     }
 }
